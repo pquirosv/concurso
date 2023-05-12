@@ -1,0 +1,58 @@
+[{
+	name: '1968.jpg',
+	year: 1968,
+	yearOptions: [1965, 1973, 1975]
+},
+{
+	name: '2012.jpg',
+	year: 2012,
+	yearOptions: [2009, 2014, 2015]
+},
+{
+	name: '2021.jpg',
+	year: 2021,
+	yearOptions: [2020, 2017, 2023]
+},
+{
+	name: 'amsterdam.jpg',
+	city: 'Amsterdam',
+	cityOptions: ['Venecia', 'Bruselas', 'Luxemburgo']
+},
+{
+	name: 'berlin1989.jpg',
+	year: 1989,
+	city: 'Berlin',
+	yearOptions: [1983, 1991, 1993],
+	cityOptions: ['Varsovia', 'Praga', 'Viena']
+},
+{
+	name: 'dallas1963.jpg',
+	year: 1963,
+	city: 'Dallas',
+	yearOptions: [1969, 1966, 1960],
+	cityOptions: ['San Francisco', 'Washington', 'Nueva York']
+},
+{
+	name: 'johanessburgo2010.jpg',
+	year: 2010,
+	city: 'Johanessburgo',
+	yearOptions: [2008, 2012, 2014],
+	cityOptions: ['Ciudad del Cabo', 'Nairobi', 'Dakar']
+},
+{
+	name: 'paris.jpg',
+	city: 'Paris',
+	cityOptions: ['Lyon', 'Bruselas', 'Madrid']
+},
+{
+	name: 'roma.jpg',
+	city: 'Roma',
+	cityOptions: ['Paris', 'Florencia', 'Pisa']
+},
+{
+	name: 'Riodejaneiro2014',
+	year: 2014,
+	city: 'Rio de Janeiro',
+	yearOptions: [2022, 2016, 2018],
+	cityOptions: ['Sao Paulo', 'Buenos Aires', 'Montevideo']
+}
