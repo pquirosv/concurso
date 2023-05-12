@@ -55,4 +55,4 @@
 	city: 'Rio de Janeiro',
 	yearOptions: [2022, 2016, 2018],
 	cityOptions: ['Sao Paulo', 'Buenos Aires', 'Montevideo']
-}
+}]
