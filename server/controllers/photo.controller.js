@@ -15,7 +15,7 @@ photoCtrl.getCityPhoto = async (req, res) => {
 
 photoCtrl.getYearPhoto = async (req, res) => {
     const photo = await Photo.aggregate([{ $match: { year: { $exists: true } } }, { $sample: { size: 1 } }]);
-   res.json(photo[0]);  
+    res.json(photo[0]);  
 }
 
 module.exports = photoCtrl;
