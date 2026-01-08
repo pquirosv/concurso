@@ -1,9 +1,11 @@
 const mongoose = require('mongoose');
 
-const URI = 'mongodb://localhost/prueba';
+// Allow overriding the URI to support Docker/local flexibility.
+const URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/prueba';
 
-mongoose.connect(URI)
-    .then(db => console.log('DB is connected'))
-    .catch(err => console.error(err));
+mongoose
+  .connect(URI)
+  .then(() => console.log(`DB is connected to ${URI}`))
+  .catch(err => console.error(err));
 
 module.exports = mongoose;
