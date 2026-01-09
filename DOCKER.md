@@ -9,7 +9,7 @@ Requisitos: Docker y Docker Compose instalados.
 docker compose up --build
 ```
 
-2) UI disponible en `http://localhost:5173`. La API queda en `http://localhost:3000` hablando con Mongo en `mongo:27017`.
+2) UI disponible en `http://localhost:8080` (vía Nginx). La API queda en `http://localhost:8080/api` y Mongo en `mongo:27017`.
 
 ## Notas
 

@@ -13,12 +13,14 @@ var yearOrCity = true
 onMounted(async () => {
   try {
     const apiUrl = yearOrCity ? 'http://localhost:3000/api/year' : 'http://localhost:3000/api/city'
+    console.log('fetching question (onMounted):', apiUrl)
     const response = await axios.get(apiUrl)
     const responseData = response.data
 
     questions.value.name = responseData.name
     questions.value.answer = yearOrCity ? responseData.year : responseData.city
     questions.value.options = yearOrCity ? responseData.yearOptions : responseData.cityOptions
+    console.log('questions updated (onMounted):', { ...questions.value })
   } catch (error) {
     console.error(error)
   }
@@ -30,20 +32,21 @@ const newQuestion = async () => {
 
   try {
     const apiUrl = yearOrCity ? 'http://localhost:3000/api/year' : 'http://localhost:3000/api/city'
+    console.log('fetching question (newQuestion):', apiUrl)
     const response = await axios.get(apiUrl)
     const responseData = response.data
 
     questions.value.name = responseData.name
     questions.value.answer = yearOrCity ? responseData.year : responseData.city
     questions.value.options = yearOrCity ? responseData.yearOptions : responseData.cityOptions
+    console.log('questions updated (newQuestion):', { ...questions.value })
   } catch (error) {
     console.error(error)
   }
 }
 
 const SetAnswer = (e) => {
-  selected.value = e.target.value
-  e.target.value = null
+  console.log('option clicked:', e?.target?.value)
 }
 </script>
 
@@ -64,22 +67,17 @@ const SetAnswer = (e) => {
 				<label  
 					v-for="(option, index) in questions.options" 
 					:for="'option' + index" 
-					:class="`option ${
-						selected == index 
-							? index == questions.answer 
-							  	? 'correct' 
-								: 'wrong'
-							: ''
-					} ${
-						selected != null
-							? 'disabled'
-							: ''
-					}`">
+					:class="{
+						option: true,
+						correct: selected != null && String(selected) === String(option) && String(option) === String(questions.answer),
+						wrong: selected != null && String(selected) === String(option) && String(option) !== String(questions.answer),
+						disabled: selected != null
+					}">
 					<input 
 						type="radio" 
 						:id="'option' + index" 
 						:name="option" 
-						:value="index" 
+						:value="option" 
 						v-model="selected" 
 						:disabled="selected !== null"
 						@change="SetAnswer" 
@@ -99,7 +97,7 @@ const SetAnswer = (e) => {
 			</button>
 		</section>
 		<div class="foto">
-			<img :src="'./../../fotos/' +questions.name" width="300" height="300"/>
+			<img :src="'/fotos/' + questions.name" width="300" height="300"/>
 		</div>	
 	</div>
 		
