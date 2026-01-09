@@ -1,5 +1,5 @@
 {
-  "name": "cumplemama",
+  "name": "concursofotos",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -9,15 +9,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/PabloQuiros/cumplemama.git"
+    "url": "git+https://github.com/PabloQuiros/concursoFotos.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/PabloQuiros/cumplemama/issues"
+    "url": "https://github.com/PabloQuiros/concursoFotos/issues"
   },
-  "homepage": "https://github.com/PabloQuiros/cumplemama#readme",
+  "homepage": "https://github.com/PabloQuiros/concursoFotos#readme",
   "dependencies": {
     "axios": "^1.4.0",
     "cors": "^2.8.5",

@@ -12,7 +12,7 @@ const yearOrCity = ref(Math.random() < 0.5)
 
 const fetchQuestion = async (sourceLabel) => {
   try {
-    const apiUrl = yearOrCity.value ? 'http://localhost:3000/api/year' : 'http://localhost:3000/api/city'
+    const apiUrl = yearOrCity.value ? '/api/year' : '/api/city'
     console.log(`fetching question (${sourceLabel}):`, apiUrl)
     const response = await axios.get(apiUrl)
     const responseData = response.data
@@ -46,7 +46,7 @@ const SetAnswer = (e) => {
 
 <template>
 	<main class="app">
-		<h1>¡Feliz cumpleaños!</h1>
+		<h1>Concurso</h1>
 		<div class="mainElement">
 		<section class="quiz">
 			<div class="quiz-info">
