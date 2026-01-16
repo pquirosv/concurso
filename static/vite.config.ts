@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [vue()],
   server: {
     proxy: {
-      '/api': 'http://api:3000',
+      '/api': 'http://api_test:3000',
     },
   },
 })

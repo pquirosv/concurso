@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 // Allow overriding the URI to support Docker/local flexibility.
-const URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/prueba';
+const URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/concurso';
 
 mongoose
   .connect(URI)

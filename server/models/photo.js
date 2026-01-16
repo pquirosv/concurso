@@ -3,11 +3,21 @@ const { Schema } = mongoose;
 
 const PhotoSchema = new Schema({
     name: {type: String, required: true},
-    city: {type: Number, required: false},
+    city: {type: String, required: false},
     year: {type: Number, required: false},
-    yearOptions: {type: [String], required: false},
-    cityOptions: {type: [String], required: false}
-}, { collection: 'photos' }); // specify the name of the collection
+    cityOptions: {type: [String], required: false},
+    yearOptions: {type: [Number], required: false},
+});
 
+const collectionFor = (dataset) => {
+  if (dataset === 'test') return process.env.PHOTOS_COLLECTION_TEST || 'photos_test';
+  return process.env.PHOTOS_COLLECTION_PROD || 'photos_prod';
+};
 
-module.exports = mongoose.model('Photo', PhotoSchema);
+const getPhotoModel = (dataset) => {
+  const collection = collectionFor(dataset);
+  const modelName = `Photo_${collection}`;
+  return mongoose.models[modelName] || mongoose.model(modelName, PhotoSchema, collection);
+};
+
+module.exports = { getPhotoModel };

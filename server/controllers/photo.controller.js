@@ -1,6 +1,11 @@
-const Photo = require('../models/photo');
+const { getPhotoModel } = require('../models/photo');
 
 const photoCtrl = {}
+
+const resolveDataset = () => {
+  const dataset = (process.env.DATASET || 'prod').toLowerCase();
+  return dataset === 'test' ? 'test' : 'prod';
+};
 
 photoCtrl.getPrueba = (req, res) => {
     res.json({
@@ -9,11 +14,13 @@ photoCtrl.getPrueba = (req, res) => {
 }
 
 photoCtrl.getCityPhoto = async (req, res) => {
+    const Photo = getPhotoModel(resolveDataset());
     const photo = await Photo.aggregate([{ $match: { city: { $exists: true } } }, { $sample: { size: 1 } }]);
     res.json(photo[0]);  
 }
 
 photoCtrl.getYearPhoto = async (req, res) => {
+    const Photo = getPhotoModel(resolveDataset());
     const photo = await Photo.aggregate([{ $match: { year: { $exists: true } } }, { $sample: { size: 1 } }]);
     res.json(photo[0]);  
 }

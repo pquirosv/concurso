@@ -5,9 +5,10 @@ services:
       - "8080:80"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - /var/lib/concurso/fotos:/var/lib/concurso/fotos:ro
     depends_on:
       - frontend
-      - api
+      - api_prod
 
   mongo:
     image: mongo:6
@@ -17,13 +18,33 @@ services:
     volumes:
       - mongo-data:/data/db
 
-  api:
+  api_test:
     build:
       context: .
       dockerfile: Dockerfile
     environment:
       - PORT=3000
-      - MONGODB_URI=mongodb://mongo:27017/prueba
+      - MONGODB_URI=mongodb://mongo:27017/concurso
+      - DATASET=test
+      - PHOTOS_COLLECTION_TEST=photos_test
+      - PHOTOS_COLLECTION_PROD=photos_prod
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./server:/usr/src/app/server
+    depends_on:
+      - mongo
+
+  api_prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PORT=3000
+      - MONGODB_URI=mongodb://mongo:27017/concurso
+      - DATASET=prod
+      - PHOTOS_COLLECTION_TEST=photos_test
+      - PHOTOS_COLLECTION_PROD=photos_prod
     ports:
       - "3000:3000"
     volumes:
@@ -43,7 +64,16 @@ services:
       - ./static:/app
       - /app/node_modules
     depends_on:
-      - api
+      - api_test
+
+  ingest:
+    image: python:3.12-slim
+    restart: "no"
+    working_dir: /app
+    command: python -m photo_ingest
+    volumes:
+      - ./tools/photo_ingest:/app
+      - ./var/lib/concurso/fotos:/photos:ro
 
 volumes:
   mongo-data:
