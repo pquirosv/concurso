@@ -64,6 +64,7 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           source: static/dist/*
           target: ${{ secrets.DEPLOY_WEB_PATH }}
+          strip_components: 2
 
       # Backend: el repo vive en el server, hacemos pull y levantamos containers
       - name: Deploy backend (git pull + docker compose)
