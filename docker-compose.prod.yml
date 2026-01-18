@@ -1,37 +1,28 @@
 services:
-  nginx:
-    build:
-      context: .
-      dockerfile: Dockerfile.nginx
-    ports:
-      - "8080:80"
-    volumes:
-      - /home/pablo/Imágenes/concursoDev:/var/lib/concurso/fotos:ro
-    depends_on:
-      - api_prod
-
   mongo:
     image: mongo:6
     restart: unless-stopped
-    ports:
-      - "27017:27017"
     volumes:
       - mongo-data:/data/db
 
-  api_prod:
+  api:
     build:
       context: .
       dockerfile: server/Dockerfile
+    restart: unless-stopped
     environment:
       - PORT=3000
       - MONGODB_URI=mongodb://mongo:27017/concurso
       - DATASET=prod
       - PHOTOS_COLLECTION_TEST=photos_test
       - PHOTOS_COLLECTION_PROD=photos_prod
-    ports:
-      - "3000:3000"
+      - PHOTOS_DIR=/var/lib/concurso/fotos
     depends_on:
       - mongo
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - /var/lib/concurso/fotos:/var/lib/concurso/fotos:ro
 
 volumes:
   mongo-data:

@@ -31,27 +31,35 @@ docker compose run --rm ingest
 
 ## Produccion (assets estaticos optimizados)
 
-Para servir el frontend como archivos estaticos optimizados (Vite build) se puede usar el stack de produccion:
+En produccion, el frontend se sirve como estatico desde el Nginx del host y la API/Mongo van en Docker.
 
-1) Construir y levantar servicios:
+1) Construir el frontend:
 ```
-docker compose -f docker-compose.prod.yml up --build
+cd static
+npm ci
+npm run build
 ```
 
-2) Abrir la UI:
-- `http://localhost:8080`
+2) Copiar `static/dist` al directorio servido por Nginx (por ejemplo `/var/www/concurso`).
 
 Notas:
-- El frontend se compila con `npm run build` dentro de `Dockerfile.nginx`.
 - Nginx sirve el contenido de `static/dist` y hace proxy a la API en `/api`.
+- Los contenedores de produccion se levantan con:
+```
+docker compose -f docker-compose.prod.yml up -d
+```
+- El servicio `api` expone `127.0.0.1:3000` y monta las fotos desde `/var/lib/concurso/fotos`.
 
 ## Deployment automatico (GitHub Actions + SSH)
 
-Al hacer push a `main`, el workflow `production-build` se conecta por SSH y ejecuta el despliegue.
+Al hacer push a `main`, el workflow `deploy` se conecta por SSH y ejecuta el despliegue.
 Debes configurar estos secrets en el repositorio:
 
 - `DEPLOY_HOST`: host o IP del servidor.
 - `DEPLOY_USER`: usuario SSH.
 - `DEPLOY_SSH_KEY`: clave privada SSH.
-- `DEPLOY_PORT`: puerto SSH (por defecto 22).
-- `DEPLOY_PATH`: ruta en el servidor donde vive el repo.
+- `DEPLOY_WEB_PATH`: ruta en el servidor donde se copian los archivos estaticos (`static/dist`).
+
+Notas:
+- El workflow usa `/opt/concurso` en el servidor para el repo y `docker-compose.prod.yml`.
+- El repo debe estar clonado en `/opt/concurso` para que `git pull` funcione.
