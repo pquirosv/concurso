@@ -67,6 +67,7 @@ typings/
 
 # Python cache/venv
 __pycache__/
+pycache/
 *.pyc
 *.pyo
 *.pyd
