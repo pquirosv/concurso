@@ -55,8 +55,8 @@ const SetAnswer = (e) => {
 					:for="'option' + index" 
 					:class="{
 						option: true,
-						correct: selected != null && String(selected) === String(option) && String(option) === String(questions.answer),
-						wrong: selected != null && String(selected) === String(option) && String(option) !== String(questions.answer),
+						correct: selected != null && String(option) === String(questions.answer),
+						wrong: selected != null  && String(option) !== String(questions.answer)&& String(selected) === String(option),
 						disabled: selected != null
 					}">
 					<input 
