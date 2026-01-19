@@ -1,79 +1,80 @@
-# Concurso de Fotos
+# Photo Contest
 
-Proyecto para mostrar fotos y jugar a adivinar el año a partir de una imagen. Incluye API (Node/Express + MongoDB), frontend (Vite) y un script de ingesta de fotos.
+Project to display photos and play a guessing game by year. It includes an API (Node/Express + MongoDB), a frontend (Vite), and a photo ingestion script.
 
-## Estructura
+## Structure
 
-- `server/`: API y modelos.
+- `server/`: API and models.
 - `static/`: frontend.
-- `tools/photo_ingest/`: script de ingesta en Python.
+- `tools/photo_ingest/`: Python ingestion script.
 
-## Ejecucion con Docker
+## Run with Docker
 
-1) Levantar servicios principales:
+1) Start core services:
 ```
 docker compose up --build
 ```
 
-2) Abrir la UI:
+2) Open the UI:
 - `http://localhost:8080` (via Nginx)
 
-3) Ejecutar ingesta (one-shot):
+3) Run ingestion (one-shot):
 ```
 docker compose run --rm ingest
 ```
 
-## Notas
+## Run frontend only (Vite dev server)
 
-- Mongo se expone en `localhost:27017`.
-- La API queda en `http://localhost:8080/api`.
-- Las fotos se montan desde `/home/pablo/Imágenes/concursoDev` en el contenedor Nginx.
+If you only want the frontend without Nginx, run Vite directly:
+```
+cd static
+npm ci
+npm run dev
+```
 
-## Produccion (assets estaticos optimizados)
+Open `http://localhost:5173`.
 
-En produccion, el frontend se sirve como estatico desde el Nginx del host y la API/Mongo van en Docker.
+## Sample photos for verification
 
-1) Construir el frontend:
+There is a small set of photos under `static/public/fotos` that you can use to verify the UI is working.
+
+## Notes
+
+- Mongo is exposed at `localhost:27017`.
+- The API is available at `http://localhost:8080/api`.
+- Photos are mounted from `/home/pablo/Imágenes/concursoDev` into the Nginx container.
+
+## Production (optimized static assets)
+
+In production, the frontend is served statically by the host Nginx and the API/Mongo run in Docker.
+
+1) Build the frontend:
 ```
 cd static
 npm ci
 npm run build
 ```
 
-2) Copiar `static/dist` al directorio servido por Nginx (por ejemplo `/var/www/concurso`).
+2) Copy `static/dist` to the directory served by Nginx (for example `/var/www/concurso`).
 
-Notas:
-- Nginx sirve el contenido de `static/dist` y hace proxy a la API en `/api`.
-- Los contenedores de produccion se levantan con:
+Notes:
+- Nginx serves `static/dist` and proxies the API under `/api`.
+- Production containers are started with:
 ```
 docker compose -f docker-compose.prod.yml up -d
 ```
-- El servicio `api` expone `127.0.0.1:3000` y monta las fotos desde `/var/lib/concurso/fotos`.
-- Para reindexar fotos en produccion:
+- The `api` service exposes `127.0.0.1:3000` and mounts photos from `/var/lib/concurso/fotos`.
+- To reindex photos in production:
 ```
 docker compose -f docker-compose.prod.yml run --rm ingest
 ```
-- Para subir fotos desde tu maquina local (ejemplo con tar):
+- To upload photos from your local machine (tar example):
 ```
-tar -czf fotos.tar.gz /ruta/a/tus/fotos
-scp fotos.tar.gz pablo@TU_SERVIDOR:/tmp/
+tar -czf fotos.tar.gz /path/to/your/photos
+scp fotos.tar.gz pablo@YOUR_SERVER:/tmp/
 ```
-- En el servidor, descomprimir y ajustar permisos:
+- On the server, extract and adjust permissions:
 ```
 sudo tar -xzf /tmp/fotos.tar.gz -C /var/lib/concurso/fotos --strip-components=1
 sudo chmod -R o+rX /var/lib/concurso/fotos
 ```
-
-## Deployment automatico (GitHub Actions + SSH)
-
-Al hacer push a `main`, el workflow `deploy` se conecta por SSH y ejecuta el despliegue.
-Debes configurar estos secrets en el repositorio:
-
-- `DEPLOY_HOST`: host o IP del servidor.
-- `DEPLOY_USER`: usuario SSH.
-- `DEPLOY_SSH_KEY`: clave privada SSH.
-- `DEPLOY_WEB_PATH`: ruta en el servidor donde se copian los archivos estaticos (`static/dist`).
-
-Notas:
-- El workflow usa `/opt/concurso` en el servidor para el repo y `docker-compose.prod.yml`.
-- El repo debe estar clonado en `/opt/concurso` para que `git pull` funcione.
