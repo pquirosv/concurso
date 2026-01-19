@@ -93,7 +93,7 @@ const SetAnswer = (e) => {
 			</div>
 		</div>
 		<div class="foto">
-			<img :src="'/fotos/' + questions.name" width="300" height="300"/>
+			<img :src="'/fotos/' + questions.name" />
 		</div>	
 	</div>
 		
