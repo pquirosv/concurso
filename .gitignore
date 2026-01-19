@@ -71,6 +71,16 @@ __pycache__/
 *.pyo
 *.pyd
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+.ipynb_checkpoints/
+*.egg-info/
+.python-version
 .venv/
 venv/
 
