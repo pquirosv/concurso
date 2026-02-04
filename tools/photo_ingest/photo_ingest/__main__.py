@@ -49,6 +49,12 @@ def is_image_file(path: Path) -> bool:
     return path.suffix.lower() in IMAGE_EXTENSIONS
 
 def prompt_drop_collection() -> bool:
+    env_value = os.getenv("DROP_COLLECTION")
+    if env_value is not None:
+        return env_value.strip().lower() in ("1", "true", "y", "yes")
+    if not sys.stdin.isatty():
+        print("Non-interactive session: keeping existing records by default.")
+        return False
     prompt = "Delete existing database records before ingest? (y)es/(n)o: "
     i = 0
     while i < 2:
@@ -62,7 +68,20 @@ def prompt_drop_collection() -> bool:
     return True
 
 def main() -> int:
-    photos_dir = Path(os.getenv("PHOTOS_DIR", "/photos"))
+    photos_dir_env = os.getenv("PHOTOS_DIR")
+    if photos_dir_env:
+        photos_dir = Path(photos_dir_env)
+    else:
+        repo_photos_dir = None
+        for parent in Path(__file__).resolve().parents:
+            candidate = parent / "static" / "public" / "fotos"
+            if candidate.exists():
+                repo_photos_dir = candidate
+                break
+        if repo_photos_dir is None:
+            print("Photos directory not found: repo root not resolvable", file=sys.stderr)
+            return 1
+        photos_dir = repo_photos_dir
     if not photos_dir.exists():
         print(f"Photos directory not found: {photos_dir}", file=sys.stderr)
         return 1
