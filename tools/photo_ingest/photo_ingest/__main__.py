@@ -84,7 +84,7 @@ def main() -> int:
     else:
         repo_photos_dir = None
         for parent in Path(__file__).resolve().parents:
-            candidate = parent / "static" / "public" / "fotos"
+            candidate = parent / "static" / "public" / "fotos_test"
             if candidate.exists():
                 repo_photos_dir = candidate
                 break
@@ -94,7 +94,14 @@ def main() -> int:
         source_dir = repo_photos_dir
 
     # Resolve the output directory (defaults to the source directory).
-    output_dir = Path(os.getenv("PHOTOS_OUT_DIR", str(source_dir)))
+    output_dir_env = os.getenv("PHOTOS_OUT_DIR")
+    if output_dir_env:
+        output_dir = Path(output_dir_env)
+    elif source_dir.name == "fotos_test":
+        output_dir = source_dir.parent / "fotos"
+    else:
+        output_dir = source_dir
+    print("output_dir:", output_dir)
 
     # Validate the photos directories exist.
     if not source_dir.exists():
