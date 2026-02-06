@@ -1,3 +1,4 @@
+import errno
 import os
 import re
 import sys
@@ -19,12 +20,6 @@ IMAGE_EXTENSIONS = {
     ".heic",
     ".heif",
 }
-
-
-# Resolve the target MongoDB collection name from env or default.
-def collection_for_ingest() -> str:
-    return os.getenv("PHOTOS_COLLECTION", "photos")
-
 
 # Pick the database from the client default or fallback env name.
 def resolve_database(client: MongoClient):
@@ -175,27 +170,25 @@ def prompt_for_path(var_name: str, default_path: Path) -> Path | None:
         attempts += 1
     return None
 
-# Resolve PHOTOS_DIR/PHOTOS_OUT_DIR, prompting if needed.
-def resolve_photos_dirs() -> tuple[Path, Path] | None:
+# Resolve PHOTOS_DIR, prompting if needed.
+def resolve_photos_dir() -> Path | None:
     repo_root = find_repo_root()
     dotenv_path = repo_root / ".env"
     dotenv_values = load_dotenv(dotenv_path)
 
     source_value = os.getenv("PHOTOS_DIR") or dotenv_values.get("PHOTOS_DIR")
-    output_value = os.getenv("PHOTOS_OUT_DIR") or dotenv_values.get("PHOTOS_OUT_DIR")
     updates: dict[str, str] = {}
 
-    if not source_value or not output_value:
+    if not source_value:
         if not sys.stdin.isatty():
             print(
-                "PHOTOS_DIR/PHOTOS_OUT_DIR are required. Define them in the environment or in .env.",
+                "PHOTOS_DIR is required. Define it in the environment or in .env.",
                 file=sys.stderr,
             )
             return None
 
         base_dir = default_photos_base_dir()
         default_source = base_dir / "fotos"
-        default_output = base_dir / "fotos_out"
 
         if not source_value:
             chosen = prompt_for_path("PHOTOS_DIR", default_source)
@@ -203,13 +196,6 @@ def resolve_photos_dirs() -> tuple[Path, Path] | None:
                 return None
             source_value = str(chosen)
             updates["PHOTOS_DIR"] = source_value
-
-        if not output_value:
-            chosen = prompt_for_path("PHOTOS_OUT_DIR", default_output)
-            if chosen is None:
-                return None
-            output_value = str(chosen)
-            updates["PHOTOS_OUT_DIR"] = output_value
 
         if updates:
             try:
@@ -219,34 +205,47 @@ def resolve_photos_dirs() -> tuple[Path, Path] | None:
                 print(f"Warning: failed to write {dotenv_path}: {exc}", file=sys.stderr)
 
     source_dir = normalize_path(source_value)
-    output_dir = normalize_path(output_value)
-
     if not ensure_directory(source_dir, "PHOTOS_DIR"):
         return None
-    if not ensure_directory(output_dir, "PHOTOS_OUT_DIR"):
-        return None
-    if output_dir.resolve() == source_dir.resolve():
-        print(
-            "PHOTOS_OUT_DIR must be different from PHOTOS_DIR to avoid writing in the source folder.",
-            file=sys.stderr,
-        )
-        return None
-    return source_dir, output_dir
+    return source_dir
 
 # Yield files from a source directory, sorted for stability.
 def iter_files(source_dir: Path):
     return (path for path in sorted(source_dir.rglob("*")) if path.is_file())
 
+# Determine whether a path is a mount point (e.g., bind-mounted volume).
+def is_mount_point(path: Path) -> bool:
+    return os.path.ismount(path)
+
+# Remove all contents of a directory, optionally keeping some paths.
+def clear_directory(path: Path, keep: set[Path] | None = None) -> None:
+    keep = keep or set()
+    for child in path.iterdir():
+        if child in keep:
+            continue
+        if child.is_dir():
+            shutil.rmtree(child)
+        else:
+            child.unlink()
+
 
 # Main ingest flow: resolve dirs, ingest files, update DB.
 def main() -> int:
-    resolved = resolve_photos_dirs()
-    if resolved is None:
+    source_dir = resolve_photos_dir()
+    if source_dir is None:
         return 1
-    source_dir, output_dir = resolved
 
     print(f"PHOTOS_DIR: {source_dir}")
-    print(f"PHOTOS_OUT_DIR: {output_dir}")
+
+    use_in_place = is_mount_point(source_dir)
+    if use_in_place:
+        temp_dir = source_dir / f".{source_dir.name}_tmp"
+    else:
+        temp_dir = source_dir.with_name(f"{source_dir.name}_tmp")
+
+    if temp_dir.exists():
+        print(f"Cleaning existing temp directory: {temp_dir}")
+        shutil.rmtree(temp_dir)
 
     # Gather files to ingest (including files inside city-named folders).
     files = list(iter_files(source_dir))
@@ -254,62 +253,95 @@ def main() -> int:
         print(f"No files found in {source_dir}")
         return 0
 
-    # Connect to MongoDB and select the target collection.
-    mongo_uri = os.getenv("MONGODB_URI", "mongodb://mongo:27017/concurso")
-    client = MongoClient(mongo_uri)
-    db = resolve_database(client)
-    collection_name = collection_for_ingest()
-    collection = db[collection_name]
-    drop_collection = prompt_drop_collection()
-    
-    # Optionally drop the collection before ingesting.
-    if drop_collection:
-        print(f"Dropping collection: {collection_name}")
-        collection.drop()
-        if output_dir.exists():
-            print(f"Clearing output directory: {output_dir}")
-            for path in output_dir.iterdir():
-                if path.is_dir():
-                    shutil.rmtree(path)
-                else:
-                    path.unlink()
-    else:
-        print(f"Appending to collection: {collection_name}")
+    if not ensure_directory(temp_dir, "TEMP_PHOTOS_DIR"):
+        return 1
 
     # Build documents for valid image files and prune non-image files.
     docs = []
+    images_found = 0
+    try:
+        for file_path in files:
+            if not is_image_file(file_path):
+                print(f"Skipping non-image file: {file_path.name}")
+                continue
+            images_found += 1
 
-    for file_path in files:
-        if not is_image_file(file_path):
-            print(f"Skipping non-image file: {file_path.name}")
-            continue
+            doc = {}
+            relative_parts = file_path.relative_to(source_dir).parts
+            city = None
+            if len(relative_parts) >= 2 and file_path.parent.parent == source_dir:
+                city = relative_parts[0]
+                doc["city"] = city
 
-        doc = {}
-        relative_parts = file_path.relative_to(source_dir).parts
-        city = None
-        if len(relative_parts) >= 2 and file_path.parent.parent == source_dir:
-            city = relative_parts[0]
-            doc["city"] = city
+            extracted_year = extract_year(file_path.name)
+            if extracted_year is not None:
+                doc["year"] = extracted_year
 
-        extracted_year = extract_year(file_path.name)
-        if extracted_year is not None:
-            doc["year"] = extracted_year
-
-        new_name = file_path.name
-
-        target_path = output_dir / new_name
-        if file_path.resolve() != target_path.resolve():
+            new_name = file_path.name
+            target_path = temp_dir / new_name
             if target_path.exists():
                 print(f"Overwriting existing file: {target_path.name}")
             shutil.copy2(file_path, target_path)
 
-        doc["name"] = new_name
-        docs.append(doc)
+            doc["name"] = new_name
+            docs.append(doc)
 
-    # Insert the documents if any were created.
-    if docs:
-        result = collection.insert_many(docs)
-        print(f"Inserted {len(result.inserted_ids)} photos into {collection_name}.")
+        if images_found == 0:
+            print("No image files found; PHOTOS_DIR will be replaced with an empty folder.")
+
+        # Connect to MongoDB and select the target collection.
+        mongo_uri = os.getenv("MONGODB_URI", "mongodb://mongo:27017/concurso")
+        client = MongoClient(mongo_uri)
+        db = resolve_database(client)
+        collection_name = os.getenv("PHOTOS_COLLECTION", "photos")
+        collection = db[collection_name]
+        drop_collection = prompt_drop_collection()
+
+        if drop_collection:
+            print(f"Dropping collection: {collection_name}")
+            collection.drop()
+        else:
+            print(f"Appending to collection: {collection_name}")
+
+        # Insert the documents if any were created.
+        if docs:
+            result = collection.insert_many(docs)
+            print(f"Inserted {len(result.inserted_ids)} photos into {collection_name}.")
+
+        if use_in_place:
+            # Bind-mounted directories cannot be renamed; swap contents in place.
+            clear_directory(source_dir, keep={temp_dir})
+            for child in temp_dir.iterdir():
+                shutil.move(str(child), source_dir / child.name)
+            shutil.rmtree(temp_dir)
+        else:
+            # Swap directories on the same filesystem, restoring on failure.
+            backup_dir = source_dir.with_name(f"{source_dir.name}_old")
+            if backup_dir.exists():
+                shutil.rmtree(backup_dir)
+            try:
+                source_dir.rename(backup_dir)
+                temp_dir.rename(source_dir)
+            except OSError as exc:
+                if exc.errno in (errno.EBUSY, errno.EXDEV):
+                    clear_directory(source_dir)
+                    for child in temp_dir.iterdir():
+                        shutil.move(str(child), source_dir / child.name)
+                    shutil.rmtree(temp_dir)
+                else:
+                    if not source_dir.exists() and backup_dir.exists():
+                        backup_dir.rename(source_dir)
+                    if temp_dir.exists():
+                        shutil.rmtree(temp_dir)
+                    raise
+            else:
+                if backup_dir.exists():
+                    shutil.rmtree(backup_dir)
+    except Exception as exc:
+        print(f"Error during ingest: {exc}", file=sys.stderr)
+        if temp_dir.exists():
+            shutil.rmtree(temp_dir)
+        return 1
 
     return 0
 
