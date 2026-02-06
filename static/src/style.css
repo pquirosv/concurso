@@ -7,7 +7,7 @@
   --color-option-hover: #2d213f;
   --color-success: #2cce7d;
   --color-danger: #ff5a5f;
-  --font-main: 'Montserrat', sans-serif;
+  --font-main: "Times New Roman", Times, "Liberation Serif", "Georgia", serif;
 
   font-family: var(--font-main);
   line-height: 1.5;
@@ -99,6 +99,21 @@ h1 {
   font-size: 1.25rem;
 }
 
+.empty-state {
+  padding: 1.5rem;
+  background-color: var(--color-panel);
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.empty-message {
+  color: var(--color-muted);
+  font-size: 1.25rem;
+}
+
 .options {
   margin-bottom: 1rem;
   text-align: center;
@@ -130,7 +145,8 @@ h1 {
 }
 
 .option.disabled {
-  opacity: 0.5;
+  opacity: 0.75;
+  cursor: auto;
 }
 
 .option input {
@@ -162,11 +178,11 @@ h1 {
   text-transform: uppercase;
   font-size: 1.2rem;
   border-radius: 0.5rem;
-  
 }
 
-.selectButton:disabled {
-  opacity: 0.5;
+.slctButton:disabled {
+  opacity: 0.8;
+  cursor: auto;
 }
 
 h2 {
@@ -207,6 +223,10 @@ p {
   }
 
   .quiz-info .question {
+    font-size: 1rem;
+  }
+
+  .empty-message {
     font-size: 1rem;
   }
 

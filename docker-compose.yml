@@ -1,3 +1,5 @@
+name: concurso
+
 services:
   nginx:
     image: nginx:alpine
@@ -5,46 +7,25 @@ services:
       - "8080:80"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - /home/pablo/Imágenes/concursoDev:/var/lib/concurso/fotos:ro
+      - ${PHOTOS_OUT_DIR:-/var/lib/concurso/fotos_out}:/var/lib/concurso/fotos:ro
     depends_on:
       - frontend
-      - api_prod
+      - api
 
   mongo:
     image: mongo:6
     restart: unless-stopped
-    ports:
-      - "27017:27017"
     volumes:
       - mongo-data:/data/db
 
-  api_test:
+  api:
     build:
       context: .
       dockerfile: server/Dockerfile
     environment:
       - PORT=3000
       - MONGODB_URI=mongodb://mongo:27017/concurso
-      - DATASET=test
-      - PHOTOS_COLLECTION_TEST=photos_test
-      - PHOTOS_COLLECTION_PROD=photos_prod
-    ports:
-      - "3001:3000"
-    volumes:
-      - ./server:/usr/src/app/server
-    depends_on:
-      - mongo
-
-  api_prod:
-    build:
-      context: .
-      dockerfile: server/Dockerfile
-    environment:
-      - PORT=3000
-      - MONGODB_URI=mongodb://mongo:27017/concurso
-      - DATASET=prod
-      - PHOTOS_COLLECTION_TEST=photos_test
-      - PHOTOS_COLLECTION_PROD=photos_prod
+      - PHOTOS_COLLECTION=photos
     ports:
       - "3000:3000"
     volumes:
@@ -63,16 +44,22 @@ services:
     volumes:
       - ./static:/app
     depends_on:
-      - api_test
+      - api
 
   ingest:
     image: python:3.12-slim
     restart: "no"
     working_dir: /app
     command: sh -c "pip install -r /app/requirements.txt && python -m photo_ingest"
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/concurso
+      - PHOTOS_COLLECTION=photos
+      - PHOTOS_DIR=/photos
+      - PHOTOS_OUT_DIR=/photos_out
     volumes:
       - ./tools/photo_ingest:/app
-      - "/home/pablo/Imágenes/concursoDev:/photos:ro"
+      - ${PHOTOS_DIR:-/var/lib/concurso/fotos}:/photos:ro
+      - ${PHOTOS_OUT_DIR:-/var/lib/concurso/fotos_out}:/photos_out:rw
     depends_on:
       - mongo
 
