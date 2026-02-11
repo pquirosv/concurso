@@ -36,6 +36,7 @@ PhotoSchema.index(
   }
 );
 
+// Function that returns the Photo model based on the collection name specified in environment variables
 const getPhotoModel = () => {
   const collection = process.env.PHOTOS_COLLECTION || 'photos';
   const modelName = `Photo_${collection}`;
