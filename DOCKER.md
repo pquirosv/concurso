@@ -110,10 +110,3 @@ Ensure host folders for `SOURCE_DIR` and `PHOTOS_DIR` exist and are mounted corr
 - The active photos collection is `photos`.
 - `Dockerfile.nginx` is not part of the currently documented production flow.
 
-## Optional debugging command
-
-Insert one sample document in local Docker Mongo:
-
-```bash
-docker compose exec mongo mongosh "mongodb://localhost:27017/concurso" --eval 'db.photos.insertOne({name:"paris.jpg",year:2021})'
-```
