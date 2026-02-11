@@ -195,7 +195,8 @@ const SetAnswer = (e) => {
 			<img
 				:src="'/fotos/' + questions.name"
 				:alt="`Foto de pregunta ${questions.mode === 'year' ? 'año' : 'ciudad'}`"
-				loading="lazy"
+				loading="eager"
+				fetchpriority="high"
 				decoding="async"
 			/>
 		</div>	
