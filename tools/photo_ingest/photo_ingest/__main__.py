@@ -6,6 +6,7 @@ import datetime
 from pathlib import Path
 
 from pymongo import MongoClient
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 
 IMAGE_EXTENSIONS = {
@@ -23,6 +24,8 @@ IMAGE_EXTENSIONS = {
 
 PHOTOS_COLLECTION = "photos"
 DEFAULT_BATCH_SIZE = 1000
+DEFAULT_MAX_IMAGE_WIDTH = 1600
+DEFAULT_IMAGE_QUALITY = 82
 
 
 # Pick the database from the client default or fallback env name.
@@ -131,6 +134,34 @@ def normalize_batch_size(batch_size: int | str | None) -> int:
     return size
 
 
+# Resolve and validate the maximum output image width for ingest resizing.
+def normalize_max_image_width(max_image_width: int | str | None) -> int:
+    candidate = max_image_width if max_image_width is not None else os.getenv(
+        "INGEST_MAX_IMAGE_WIDTH", str(DEFAULT_MAX_IMAGE_WIDTH)
+    )
+    try:
+        size = int(candidate)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("INGEST_MAX_IMAGE_WIDTH must be a positive integer.") from exc
+    if size < 1:
+        raise ValueError("INGEST_MAX_IMAGE_WIDTH must be >= 1.")
+    return size
+
+
+# Resolve and validate the output quality for lossy formats (JPEG/WEBP).
+def normalize_image_quality(image_quality: int | str | None) -> int:
+    candidate = image_quality if image_quality is not None else os.getenv(
+        "INGEST_IMAGE_QUALITY", str(DEFAULT_IMAGE_QUALITY)
+    )
+    try:
+        quality = int(candidate)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("INGEST_IMAGE_QUALITY must be an integer between 1 and 100.") from exc
+    if quality < 1 or quality > 100:
+        raise ValueError("INGEST_IMAGE_QUALITY must be between 1 and 100.")
+    return quality
+
+
 # Insert a pending batch into Mongo and clear the in-memory buffer.
 def flush_batch(collection, docs: list[dict]) -> int:
     if not docs:
@@ -164,6 +195,46 @@ def build_photo_doc(file_path: Path, source_dir: Path) -> dict | None:
     return doc
 
 
+# Resize/compress one image for quiz delivery while keeping the same filename.
+def copy_resized_image(
+    source_path: Path,
+    target_path: Path,
+    max_width: int,
+    image_quality: int,
+) -> None:
+    try:
+        with Image.open(source_path) as image:
+            image = ImageOps.exif_transpose(image)
+            image.load()
+
+            if image.width > max_width:
+                ratio = max_width / float(image.width)
+                target_height = max(1, int(image.height * ratio))
+                image = image.resize((max_width, target_height), Image.Resampling.LANCZOS)
+
+            image_format = (image.format or source_path.suffix.replace(".", "")).upper()
+            if image_format == "JPG":
+                image_format = "JPEG"
+
+            save_kwargs: dict = {}
+            if image_format in {"JPEG", "WEBP"}:
+                save_kwargs["quality"] = image_quality
+            if image_format in {"JPEG", "PNG", "WEBP"}:
+                save_kwargs["optimize"] = True
+            if image_format == "JPEG":
+                if image.mode not in ("RGB", "L"):
+                    image = image.convert("RGB")
+                save_kwargs["progressive"] = True
+
+            image.save(target_path, format=image_format, **save_kwargs)
+    except (UnidentifiedImageError, OSError) as exc:
+        print(
+            f"Warning: could not resize {source_path.name} ({exc}). Copying original file.",
+            file=sys.stderr,
+        )
+        shutil.copy2(source_path, target_path)
+
+
 # Main ingest flow: resolve dirs, ingest files, update DB.
 # It can be called from CLI or programmatically (e.g., future admin actions).
 def main(
@@ -172,6 +243,8 @@ def main(
     *,
     drop_existing: bool | None = None,
     batch_size: int | None = None,
+    max_image_width: int | None = None,
+    image_quality: int | None = None,
     mongo_uri: str | None = None,
     collection_name: str = PHOTOS_COLLECTION,
     interactive: bool = True,
@@ -183,6 +256,8 @@ def main(
 
     try:
         batch_size = normalize_batch_size(batch_size)
+        max_image_width = normalize_max_image_width(max_image_width)
+        image_quality = normalize_image_quality(image_quality)
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
         return 1
@@ -190,6 +265,8 @@ def main(
     print(f"SOURCE_DIR: {source_dir}")
     print(f"PHOTOS_DIR: {photos_dir}")
     print(f"Batch size: {batch_size}")
+    print(f"Max image width: {max_image_width}")
+    print(f"Image quality: {image_quality}")
 
     docs: list[dict] = []
     inserted_total = 0
@@ -228,7 +305,12 @@ def main(
                     )
                     continue
                 print(f"Overwriting existing file: {target_path.name}")
-            shutil.copy2(file_path, target_path)
+            copy_resized_image(
+                file_path,
+                target_path,
+                max_width=max_image_width,
+                image_quality=image_quality,
+            )
 
             docs.append(doc)
             if len(docs) >= batch_size:
