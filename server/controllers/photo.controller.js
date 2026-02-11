@@ -8,6 +8,50 @@ const respondDbError = (res, err, context) => {
     res.status(500).json({ error: 'Database error' });
 }
 
+const RANDOM_POOL_SIZE = Math.max(1, parseInt(process.env.RANDOM_POOL_SIZE || '25', 10));
+const randomPools = {
+    year: { items: [], loading: null },
+    city: { items: [], loading: null },
+};
+
+// Build the aggregation pipeline used to load a random sample pool.
+const buildRandomPipeline = (field, size) => [
+    { $match: { [field]: { $exists: true } } },
+    { $sample: { size } },
+    { $project: { name: 1, year: 1, city: 1 } },
+];
+
+// Fetch and normalize a random pool for the requested field.
+const loadRandomPool = async (Photo, field) => {
+    const pipeline = buildRandomPipeline(field, RANDOM_POOL_SIZE);
+    const docs = await Photo.aggregate(pipeline);
+    return Array.isArray(docs) ? docs : [];
+};
+
+// Serve a random photo from an in-memory pool, refilling when empty.
+const getRandomPhotoByField = async (field) => {
+    const pool = randomPools[field];
+    if (!pool) {
+        throw new Error(`Unknown random field: ${field}`);
+    }
+
+    if (pool.items.length === 0) {
+        if (!pool.loading) {
+            const Photo = getPhotoModel();
+            pool.loading = loadRandomPool(Photo, field)
+                .then((docs) => {
+                    pool.items = docs;
+                })
+                .finally(() => {
+                    pool.loading = null;
+                });
+        }
+        await pool.loading;
+    }
+
+    return pool.items.pop() || null;
+};
+
 // Simple health/test endpoint to verify the photos API is reachable.
 photoCtrl.getPrueba = (req, res) => {
     res.json({
@@ -18,12 +62,11 @@ photoCtrl.getPrueba = (req, res) => {
 // Return a random photo document that contains a year field.
 photoCtrl.getYearPhoto = async (req, res) => {
     try {
-        const Photo = getPhotoModel();
-        const photo = await Photo.aggregate([{ $match: { year: { $exists: true } } }, { $sample: { size: 1 } }]);
-        if (!photo || photo.length === 0) {
+        const photo = await getRandomPhotoByField('year');
+        if (!photo) {
             return res.status(404).json({ error: 'No photo found with year' });
         }
-        res.json(photo[0]);
+        res.json(photo);
     } catch (err) {
         respondDbError(res, err, 'getYearPhoto');
     }
@@ -32,12 +75,11 @@ photoCtrl.getYearPhoto = async (req, res) => {
 // Return a random photo document that contains a city field.
 photoCtrl.getCityPhoto = async (req, res) => {
     try {
-        const Photo = getPhotoModel();
-        const photo = await Photo.aggregate([{ $match: { city: { $exists: true } } }, { $sample: { size: 1 } }]);
-        if (!photo || photo.length === 0) {
+        const photo = await getRandomPhotoByField('city');
+        if (!photo) {
             return res.status(404).json({ error: 'No photo found with city' });
         }
-        res.json(photo[0]);
+        res.json(photo);
     } catch (err) {
         respondDbError(res, err, 'getCityPhoto');
     }
