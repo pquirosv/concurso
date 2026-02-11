@@ -41,6 +41,7 @@ docker compose run --rm ingest
 ## Documentation Map
 
 - Full local Docker and production runtime guide: `DOCKER.md`
+- Full local Docker and production runtime guide: [`DOCKER.md`](DOCKER.md)
 - Frontend-only Vite details: `static/README.md`
 
 ## Project Structure
