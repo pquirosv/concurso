@@ -5,8 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon server/index.js",
-    "test": "jest --runInBand",
-    "test:integration": "jest --runInBand server/**/*.test.js"
+    "test": "jest --runInBand --detectOpenHandles --forceExit"
   },
   "repository": {
     "type": "git",

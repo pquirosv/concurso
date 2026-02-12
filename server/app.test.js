@@ -25,12 +25,12 @@ describe('Photos API', () => {
   });
 
   afterAll(async () => {
-    if (mongoose.connection.readyState !== 0) {
-      await mongoose.connection.close();
-    }
-
-    if (mongoServer) {
-      await mongoServer.stop();
+    try {
+      await mongoose.disconnect();
+    } finally {
+      if (mongoServer) {
+        await mongoServer.stop({ doCleanup: true, force: true });
+      }
     }
   });
 
