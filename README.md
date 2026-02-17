@@ -18,6 +18,9 @@ cd concurso
 ```bash
 SOURCE_DIR=/path/to/your/photos
 PHOTOS_DIR=/path/to/your/photos_out
+SESSION_COOKIE_SECRET=replace-with-a-long-random-secret
+ADMIN_PASSWORD_HASH=replace-with-bcrypt-hash
+ADMIN_SESSION_TTL_DAYS=7
 ```
 
 3. Ensure both folders exist and place source images in `SOURCE_DIR`:
@@ -37,6 +40,22 @@ docker compose run --rm ingest
 
 6. Open the app:
 - `http://localhost:8080` (main entry through Nginx)
+
+## Admin Authentication
+
+- Admin UI routes:
+  - `/admin/login`
+  - `/admin` (protected)
+- API auth endpoints:
+  - `POST /api/admin/login`
+  - `GET /api/admin/session`
+  - `POST /api/admin/logout`
+
+Generate a bcrypt hash for `ADMIN_PASSWORD_HASH`:
+
+```bash
+node -e "const bcrypt=require('bcryptjs'); console.log(bcrypt.hashSync('your-admin-password', 10));"
+```
 
 ## Documentation Map
 

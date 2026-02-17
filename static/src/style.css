@@ -7,6 +7,7 @@
   --color-option-hover: #2d213f;
   --color-success: #2cce7d;
   --color-danger: #ff5a5f;
+  --color-link: #4a90e2;
   --font-main: "Times New Roman", Times, "Liberation Serif", "Georgia", serif;
 
   font-family: var(--font-main);
@@ -29,8 +30,33 @@ body {
 
 #app {
   width: 100%;
+}
+
+.shell {
+  width: 100%;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+}
+
+.top-nav {
+  width: 100%;
+  max-width: 1100px;
+  padding: 1rem 0.25rem 0;
+  display: flex;
+  gap: 1rem;
+}
+
+.top-link {
+  color: var(--color-text);
+  text-decoration: none;
+  opacity: 0.8;
+}
+
+.top-link:hover {
+  opacity: 1;
+  color: var(--color-link);
+  text-decoration: underline;
 }
 
 * {
@@ -44,7 +70,6 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 2rem;
   width: 100%;
   max-width: 1100px;
   min-height: 100vh;
@@ -86,6 +111,7 @@ h1 {
 .quiz {
   background-color: var(--color-panel);
   padding: 2rem;
+  margin: 1rem;
   flex: 1 1 17rem;
   width: 100%;
   max-width: 640px;
@@ -198,14 +224,95 @@ p {
   text-align: center;
 }
 
+.admin-page {
+  justify-content: center;
+}
+
+.admin-card {
+  width: 100%;
+  max-width: 32rem;
+  padding: 2rem;
+  background-color: var(--color-panel);
+  border-radius: 0.75rem;
+}
+
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.admin-field {
+  margin-top: 1rem;
+}
+
+.admin-label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.95rem;
+  color: var(--color-muted);
+}
+
+.admin-input {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid #57446f;
+  background-color: var(--color-option);
+  color: var(--color-text);
+}
+
+.admin-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.95rem;
+  color: var(--color-muted);
+}
+
+.admin-btn {
+  appearance: none;
+  border: 0;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  background-color: var(--color-success);
+  color: #10291e;
+  font-weight: 700;
+}
+
+.admin-btn:disabled {
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+
+.admin-note {
+  font-size: 1rem;
+  text-align: left;
+}
+
+.admin-error {
+  margin-top: 1rem;
+  color: var(--color-danger);
+  font-size: 0.95rem;
+  text-align: left;
+}
+
 @media (orientation: portrait) {
   .mainElement {
     flex-direction: column;
     align-items: center;
+    justify-content: flex-start;
+    gap: 1rem;
+    padding: 0 1rem;
   }
 
   .quiz {
     order: 1;
+    width: 100%;
+    margin: 1rem auto;
   }
 
   .foto {
@@ -215,6 +322,10 @@ p {
 
   .foto img {
     max-height: 50vh;
+  }
+
+  .top-nav {
+    display: none;
   }
 }
 
@@ -231,6 +342,14 @@ p {
   .mainElement {
     gap: 0.75rem;
     flex-wrap: nowrap;
+  }
+
+  .top-nav {
+    display: none;
+  }
+
+  .top-link {
+    font-size: 0.7rem;
   }
 
   .quiz {

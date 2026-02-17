@@ -1,19 +1,26 @@
 const request = require('supertest');
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
+const bcrypt = require('bcryptjs');
 
 describe('Photos API', () => {
   let mongoServer;
   let app;
+  let adminAgent;
+  const adminPassword = 'test-admin-password';
 
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
     process.env.MONGODB_URI = mongoServer.getUri('concurso_test');
     process.env.PHOTOS_COLLECTION = 'photos_test';
+    process.env.SESSION_COOKIE_SECRET = 'test-session-secret';
+    process.env.ADMIN_PASSWORD_HASH = bcrypt.hashSync(adminPassword, 10);
+    process.env.ADMIN_SESSION_TTL_DAYS = '7';
 
     jest.resetModules();
 
     app = require('./app');
+    adminAgent = request.agent(app);
     const { getPhotoModel } = require('./models/photo');
     const Photo = getPhotoModel();
 
@@ -59,4 +66,41 @@ describe('Photos API', () => {
       })
     );
   });
+
+  test('POST /api/admin/login returns 401 with wrong password', async () => {
+    const response = await request(app).post('/api/admin/login').send({ password: 'wrong-password' });
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({ error: 'Invalid credentials' });
+  });
+
+  test('GET /api/admin/health denies access without session', async () => {
+    const response = await request(app).get('/api/admin/health');
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({ authenticated: false, error: 'Unauthorized' });
+  });
+
+  test('POST /api/admin/login creates an authenticated session cookie', async () => {
+    const response = await adminAgent.post('/api/admin/login').send({ password: adminPassword, remember: true });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ authenticated: true });
+    expect(response.headers['set-cookie']).toEqual(expect.arrayContaining([expect.stringContaining('admin_sid=')]));
+  });
+
+  test('GET /api/admin/session returns true when admin session exists', async () => {
+    const response = await adminAgent.get('/api/admin/session');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ authenticated: true });
+  });
+
+  test('GET /api/admin/health allows access with authenticated session', async () => {
+    const response = await adminAgent.get('/api/admin/health');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ status: 'admin ok' });
+  });
+
 });

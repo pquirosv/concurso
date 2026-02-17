@@ -34,7 +34,7 @@ const getRandomPhotoByField = async (field) => {
     if (!pool) {
         throw new Error(`Unknown random field: ${field}`);
     }
-
+    // if the pool is empty, either wait for the ongoing load or start a new one to refill it
     if (pool.items.length === 0) {
         if (!pool.loading) {
             const Photo = getPhotoModel();
@@ -111,7 +111,7 @@ photoCtrl.getCities = async (req, res) => {
 photoCtrl.hasYearPhoto = async (req, res) => {
     try {
         const Photo = getPhotoModel();
-        const count = await Photo.countDocuments({ year: { $exists: true } });
+        const count = await Photo.exists({ year: { $exists: true } });
         res.json({ hasYearPhoto: count > 0 });
     } catch (err) {
         respondDbError(res, err, 'hasYearPhoto');

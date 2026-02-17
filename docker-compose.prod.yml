@@ -13,6 +13,9 @@ services:
     environment:
       - PORT=3000
       - MONGODB_URI=mongodb://mongo:27017/concurso
+      - SESSION_COOKIE_SECRET=${SESSION_COOKIE_SECRET:?SESSION_COOKIE_SECRET is required}
+      - ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH:?ADMIN_PASSWORD_HASH is required}
+      - ADMIN_SESSION_TTL_DAYS=${ADMIN_SESSION_TTL_DAYS:-7}
     depends_on:
       - mongo
     ports:
