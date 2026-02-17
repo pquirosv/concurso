@@ -137,7 +137,7 @@ const newQuestion = async () => {
 }
 
 // Handle selecting an answer option.
-const SetAnswer = (e) => {
+const setAnswer = (e) => {
   console.log('option clicked:', e?.target?.value)
 }
 </script>
@@ -156,25 +156,26 @@ const SetAnswer = (e) => {
 				<!-- If the question is about city, show "¿De que ciudad es esta foto?" -->
 				<span v-else class="question">¿De que ciudad es esta foto?</span>
 			</div>
-			<div class="options">
-				<label  
-					v-for="(option, index) in questions.options" 
-					:for="'option' + index" 
-					:class="{
-						option: true,
-						correct: selected != null && String(option) === String(questions.answer),
-						wrong: selected != null  && String(option) !== String(questions.answer)&& String(selected) === String(option),
+				<div class="options">
+					<label  
+						v-for="(option, index) in questions.options" 
+						:key="`${option}-${index}`"
+						:for="'option' + index" 
+						:class="{
+							option: true,
+							correct: selected != null && String(option) === String(questions.answer),
+							wrong: selected != null  && String(option) !== String(questions.answer)&& String(selected) === String(option),
 						disabled: selected != null
 					}">
-					<input 
-						type="radio" 
-						:id="'option' + index" 
-						:name="option" 
-						:value="option" 
-						v-model="selected" 
-						:disabled="selected !== null"
-						@change="SetAnswer" 
-					/>
+						<input 
+							type="radio" 
+							:id="'option' + index" 
+							name="question-options" 
+							:value="option" 
+							v-model="selected" 
+							:disabled="selected !== null"
+							@change="setAnswer" 
+						/>
 					<span>{{ option }} </span>
 				</label>
 			</div>
