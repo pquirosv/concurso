@@ -6,7 +6,7 @@ require('./database');
 
 const app = express();
 
-// Settings
+// Settings 
 app.set('port', process.env.PORT || 3000);
 app.set('trust proxy', 1);
 

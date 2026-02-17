@@ -25,28 +25,17 @@ const showMain = computed(
 	() => hasInitialized.value && hasPhotos.value && isQuestionReady.value
 )
 
-// Generate an unbiased random integer in [0, maxExclusive) using Web Crypto.
-const randomInt = (maxExclusive) => {
-  if (!Number.isInteger(maxExclusive) || maxExclusive <= 0) {
-    throw new Error('maxExclusive must be a positive integer')
-  }
-  const maxUint32 = 0x100000000
-  const limit = maxUint32 - (maxUint32 % maxExclusive)
-  const buffer = new Uint32Array(1)
-  do {
-    crypto.getRandomValues(buffer)
-  } while (buffer[0] >= limit)
-  return buffer[0] % maxExclusive
-}
+// Generate a random integer in [0, maxExclusive) using Math.random.
+const randomInt = (maxExclusive) => Math.floor(Math.random() * maxExclusive)
 
-// Shuffle an array using Fisher-Yates and Web Crypto randomness.
-const shuffleCrypto = (items) => {
-  const arr = [...items]
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = randomInt(i + 1)
-    ;[arr[i], arr[j]] = [arr[j], arr[i]]
-  }
-  return arr
+// Shuffle an array with Fisher-Yates using Math.random.
+const shuffle = (items) => {
+	const arr = [...items]
+	for (let i = arr.length - 1; i > 0; i--) {
+		const j = randomInt(i + 1)
+		;[arr[i], arr[j]] = [arr[j], arr[i]]
+	}
+	return arr
 }
 
 // Fetch dataset metadata once (photo count, year availability, cities list).
@@ -74,12 +63,38 @@ const initDatasetInfo = async () => {
 // Determine the question mode based on dataset characteristics.
 const setQuestionMode = () => {
 	if (hasYearPhoto.value && cities.value.length > 0) {
-		questionMode.value = () => (randomInt(2) === 0 ? '/api/year' : '/api/city')
+		questionMode.value = () => (Math.random() < 0.5 ? '/api/year' : '/api/city')
 	} else if (!hasYearPhoto.value) {
 		questionMode.value = () => '/api/city'
 	} else {
 		questionMode.value = () => '/api/year'
 	}
+}
+
+// Build question state for year mode using the selected photo year and nearby candidates.
+const setYearQuestion = (responseData) => {
+	const currentYear = new Date().getFullYear()
+	const minYear = responseData.year - 4
+	const maxYear = responseData.year + 4
+	const yearCandidates = Array.from({ length: maxYear - minYear + 1 }, (_, i) => minYear + i)
+		.filter((year) => year !== responseData.year && year < currentYear)
+	const candidates = shuffle(yearCandidates).slice(0, 3)
+
+	questions.value.name = responseData.name
+	questions.value.mode = 'year'
+	questions.value.answer = responseData.year
+	questions.value.options = shuffle([responseData.year, ...candidates])
+}
+
+// Build question state for city mode using the selected photo city and random alternatives.
+const setCityQuestion = (responseData) => {
+	questions.value.name = responseData.name
+	questions.value.mode = 'city'
+	questions.value.answer = responseData.city
+	const candidates = shuffle(cities.value
+		.filter((city) => city && city !== responseData.city)
+	).slice(0, 3)
+	questions.value.options = shuffle([responseData.city, ...candidates])
 }
 
 // Fetch a new question and populate the UI state.
@@ -90,30 +105,11 @@ const fetchQuestion = async (sourceLabel) => {
 
     const response = await axios.get(apiUrl)
     const responseData = response.data
-	// if apiUrl is /api/year, we need to generate the year options
 	if (apiUrl === '/api/year') {
-		const currentYear = new Date().getFullYear()
-    	const minYear = responseData.year - 4
-    	const maxYear = responseData.year + 4
-    	const yearCandidates = Array.from({ length: maxYear - minYear + 1 }, (_, i) => minYear + i)
-      		.filter((year) => year !== responseData.year && year < currentYear)
-	  	const candidates = shuffleCrypto(yearCandidates).slice(0, 3)
-
-    	questions.value.name = responseData.name
-		questions.value.mode = 'year'
-    	questions.value.answer = responseData.year
-		questions.value.options = shuffleCrypto([responseData.year, ...candidates])
+		setYearQuestion(responseData)
 	}
-
-	// If apiUrl is /api/city, we need to generate city options among the cities list
-	if (apiUrl === '/api/city') {
-		questions.value.name = responseData.name
-		questions.value.mode = 'city'
-		questions.value.answer = responseData.city
-		const candidates = shuffleCrypto(cities.value
-			.filter((city) => city && city !== responseData.city)
-		).slice(0, 3)
-		questions.value.options = shuffleCrypto([responseData.city, ...candidates])
+	else if (apiUrl === '/api/city') {
+		setCityQuestion(responseData)
 	}
     console.log(`questions updated (${sourceLabel}):`, { ...questions.value })
   } catch (error) {

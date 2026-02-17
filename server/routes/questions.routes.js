@@ -3,8 +3,8 @@ const router = express.Router();
 
 const photo = require('../controllers/photo.controller');
 
-const CACHE_SECONDS_CITIES = Math.max(0, parseInt(process.env.CACHE_SECONDS_CITIES || '300', 10));
-const CACHE_SECONDS_STATS = Math.max(0, parseInt(process.env.CACHE_SECONDS_STATS || '60', 10));
+// TODO Think in some invalidation strategy when photos are updated/added
+const CACHE_SECONDS = Math.max(0, parseInt(process.env.CACHE_SECONDS || '600', 10));
 
 // Build a per-route cache middleware with max-age seconds (or no-store if disabled).
 const cacheFor = (seconds) => (req, res, next) => {
@@ -25,8 +25,8 @@ const noStore = (req, res, next) => {
 router.get('/', photo.getPrueba);
 router.get('/year', noStore, photo.getYearPhoto);
 router.get('/city', noStore, photo.getCityPhoto);
-router.get('/cities', cacheFor(CACHE_SECONDS_CITIES), photo.getCities);
-router.get('/photos/count', cacheFor(CACHE_SECONDS_STATS), photo.getPhotosCount);
-router.get('/photos/hasYearPhoto', cacheFor(CACHE_SECONDS_STATS), photo.hasYearPhoto);
+router.get('/cities', cacheFor(CACHE_SECONDS), photo.getCities);
+router.get('/photos/count', cacheFor(CACHE_SECONDS), photo.getPhotosCount);
+router.get('/photos/hasYearPhoto', cacheFor(CACHE_SECONDS), photo.hasYearPhoto);
 
 module.exports = router;
