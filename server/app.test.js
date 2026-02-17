@@ -103,4 +103,97 @@ describe('Photos API', () => {
     expect(response.body).toEqual({ status: 'admin ok' });
   });
 
+  test('GET /api/admin/photos returns paginated admin photo list', async () => {
+    const response = await adminAgent.get('/api/admin/photos?page=1&limit=2&sortBy=name&sortDir=asc');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        page: 1,
+        limit: 2,
+        total: 3,
+        totalPages: 2,
+      })
+    );
+    expect(response.body.items).toHaveLength(2);
+    expect(response.body.items[0].name <= response.body.items[1].name).toBe(true);
+  });
+
+  test('GET /api/admin/photos/:id returns single photo', async () => {
+    const { getPhotoModel } = require('./models/photo');
+    const Photo = getPhotoModel();
+    const seeded = await Photo.findOne({ name: 'Photo One' }).lean();
+
+    const response = await adminAgent.get(`/api/admin/photos/${seeded._id}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        _id: seeded._id.toString(),
+        name: 'Photo One',
+        year: 1990,
+        city: 'San Jose',
+      })
+    );
+  });
+
+  test('POST /api/admin/photos creates a photo', async () => {
+    const response = await adminAgent.post('/api/admin/photos').send({
+      name: 'Photo Four',
+      year: 2010,
+      city: 'Heredia',
+    });
+
+    expect(response.status).toBe(201);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        _id: expect.any(String),
+        name: 'Photo Four',
+        year: 2010,
+        city: 'Heredia',
+      })
+    );
+  });
+
+  test('PATCH /api/admin/photos/:id updates photo metadata', async () => {
+    const { getPhotoModel } = require('./models/photo');
+    const Photo = getPhotoModel();
+    const existing = await Photo.findOne({ name: 'Photo Two' }).lean();
+
+    const response = await adminAgent.patch(`/api/admin/photos/${existing._id}`).send({
+      name: 'Photo Two Updated',
+      city: 'Limon',
+      year: 2005,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        _id: existing._id.toString(),
+        name: 'Photo Two Updated',
+        city: 'Limon',
+        year: 2005,
+      })
+    );
+  });
+
+  test('DELETE /api/admin/photos/:id deletes metadata and reports file result', async () => {
+    const { getPhotoModel } = require('./models/photo');
+    const Photo = getPhotoModel();
+    const removable = await Photo.create({ name: 'To Delete', year: 1999, city: 'Puntarenas' });
+
+    const response = await adminAgent.delete(`/api/admin/photos/${removable._id}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        deleted: true,
+        file: expect.objectContaining({ requested: false, deleted: false }),
+      })
+    );
+
+    const stillThere = await Photo.findById(removable._id);
+    expect(stillThere).toBeNull();
+  });
+
 });
