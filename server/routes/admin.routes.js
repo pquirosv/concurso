@@ -7,7 +7,6 @@ const { adminLoginRateLimit } = require('../middlewares/admin-login-rate-limit.m
 const router = express.Router();
 
 router.post('/login', adminLoginRateLimit, admin.login);
-router.post('/logout', admin.logout);
 router.get('/session', admin.getSession);
 
 router.use(requireAdmin);

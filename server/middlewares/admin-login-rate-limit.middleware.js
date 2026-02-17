@@ -1,7 +1,7 @@
-const windowMs = Math.max(1000, parseInt(process.env.ADMIN_LOGIN_RATE_LIMIT_WINDOW_MS || '600000', 10));
-const maxAttempts = Math.max(1, parseInt(process.env.ADMIN_LOGIN_RATE_LIMIT_MAX || '10', 10));
+const windowMs = Math.max(1000, parseInt(process.env.ADMIN_LOGIN_RATE_LIMIT_WINDOW_MS || '600000', 10)); // Default to 10 minutes, minimum 1 second.
+const maxAttempts = Math.max(1, parseInt(process.env.ADMIN_LOGIN_RATE_LIMIT_MAX || '3', 10)); 
 const cleanupIntervalMs = Math.max(windowMs, 60000);
-const attemptBuckets = new Map();
+const attemptBuckets = new Map(); // In-memory buckets for tracking login attempts per IP.
 
 // Resolve a stable client key for per-IP admin login throttling.
 const getClientKey = (req) => req.ip || req.socket?.remoteAddress || 'unknown';

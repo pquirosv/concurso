@@ -103,12 +103,4 @@ describe('Photos API', () => {
     expect(response.body).toEqual({ status: 'admin ok' });
   });
 
-  test('POST /api/admin/logout clears session and revokes protected access', async () => {
-    const logoutResponse = await adminAgent.post('/api/admin/logout');
-    const healthResponse = await adminAgent.get('/api/admin/health');
-
-    expect(logoutResponse.status).toBe(200);
-    expect(logoutResponse.body).toEqual({ authenticated: false });
-    expect(healthResponse.status).toBe(401);
-  });
 });

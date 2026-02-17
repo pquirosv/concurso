@@ -25,7 +25,6 @@ const validateAdminAuthEnv = () => {
   if (!process.env.ADMIN_PASSWORD_HASH) {
     missing.push('ADMIN_PASSWORD_HASH');
   }
-
   if (missing.length > 0) {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }

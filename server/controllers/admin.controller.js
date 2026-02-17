@@ -2,9 +2,7 @@ const bcrypt = require('bcryptjs');
 
 const {
   adminPasswordHash,
-  adminSessionCookieName,
   adminSessionTtlMs,
-  isProduction,
 } = require('../config/admin-auth');
 
 const adminCtrl = {};
@@ -36,6 +34,7 @@ const applySessionLifetime = (session, remember) => {
     session.cookie.maxAge = adminSessionTtlMs;
     return;
   }
+  // For non-remembered sessions, use a session cookie that expires on browser close.
   session.cookie.maxAge = undefined;
   session.cookie.expires = false;
 };
@@ -80,31 +79,6 @@ adminCtrl.login = async (req, res) => {
 // Return the current admin session authentication status.
 adminCtrl.getSession = (req, res) => {
   res.json({ authenticated: Boolean(req.session?.isAdmin) });
-};
-
-// Destroy the current admin session and clear the auth cookie.
-adminCtrl.logout = (req, res) => {
-  if (!req.session) {
-    res.clearCookie(adminSessionCookieName, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: isProduction,
-    });
-    return res.json({ authenticated: false });
-  }
-
-  req.session.destroy((destroyErr) => {
-    if (destroyErr) {
-      console.error('[admin] session destroy failed', destroyErr);
-      return res.status(500).json({ error: 'Session error' });
-    }
-    res.clearCookie(adminSessionCookieName, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: isProduction,
-    });
-    return res.json({ authenticated: false });
-  });
 };
 
 // Expose a protected admin-only endpoint for auth/middleware verification.

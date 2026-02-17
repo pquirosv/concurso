@@ -23,7 +23,7 @@ const app = express();
 app.set('port', process.env.PORT || 3000);
 app.set('trust proxy', 1);
 
-const RATE_LIMIT_WINDOW_MS = Math.max(1000, parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10));
+const RATE_LIMIT_WINDOW_MS = Math.max(1000, parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10)); // Default to 1 minute
 const RATE_LIMIT_MAX = Math.max(1, parseInt(process.env.RATE_LIMIT_MAX || '120', 10));
 const RATE_LIMIT_CLEANUP_INTERVAL_MS = Math.max(RATE_LIMIT_WINDOW_MS, 60000);
 const rateLimitBuckets = new Map();
@@ -58,7 +58,6 @@ const rateLimiter = (req, res, next) => {
   const key = getClientKey(req);
   let bucket = rateLimitBuckets.get(key);
 
-  // If no bucket exists or current window expired, create/reset it
   if (!bucket || now - bucket.windowStart >= RATE_LIMIT_WINDOW_MS) {
     bucket = { windowStart: now, count: 0 };
     rateLimitBuckets.set(key, bucket);

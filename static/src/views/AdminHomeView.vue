@@ -57,16 +57,6 @@ onMounted(async () => {
   }
 });
 
-// Logout the current admin session and redirect to the login page.
-const logout = async () => {
-  try {
-    await axios.post('/api/admin/logout', {}, { withCredentials: true });
-  } catch (error) {
-    console.error(error);
-  } finally {
-    await router.push('/admin/login');
-  }
-};
 </script>
 
 <template>
@@ -85,8 +75,6 @@ const logout = async () => {
 
       <p class="admin-note" v-if="isLoading">Loading...</p>
       <p class="admin-note" v-else>Protected API status: {{ apiStatus }}</p>
-
-      <button class="admin-btn admin-btn-secondary" type="button" @click="logout">Log out</button>
     </section>
   </main>
 </template>
