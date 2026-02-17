@@ -17,9 +17,18 @@ Create `.env` in repo root:
 ```bash
 SOURCE_DIR=/path/to/your/photos
 PHOTOS_DIR=/path/to/your/photos_out
+SESSION_COOKIE_SECRET=replace-with-a-long-random-secret
+ADMIN_PASSWORD_HASH=replace-with-bcrypt-hash
+ADMIN_SESSION_TTL_DAYS=7
 ```
 
 Use absolute host paths.
+
+Generate `ADMIN_PASSWORD_HASH` with:
+
+```bash
+node -e "const bcrypt=require('bcryptjs'); console.log(bcrypt.hashSync('your-admin-password', 10));"
+```
 
 ### 2. Prepare folders
 
@@ -109,4 +118,3 @@ Ensure host folders for `SOURCE_DIR` and `PHOTOS_DIR` exist and are mounted corr
 
 - The active photos collection is `photos`.
 - `Dockerfile.nginx` is not part of the currently documented production flow.
-
