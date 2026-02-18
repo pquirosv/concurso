@@ -13,8 +13,10 @@ const {
   sessionSecret,
   validateAdminAuthEnv,
 } = require('./config/admin-auth');
+const { validatePhotoStorageEnv } = require('./config/photo-storage');
 
 validateAdminAuthEnv();
+validatePhotoStorageEnv();
 require('./database');
 
 const app = express();
