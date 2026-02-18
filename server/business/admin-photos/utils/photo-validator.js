@@ -7,7 +7,7 @@ class PhotoValidator {
     const payload = {};
     const hasYear = Object.prototype.hasOwnProperty.call(body || {}, 'year');
     const hasCity = Object.prototype.hasOwnProperty.call(body || {}, 'city');
-
+    
     const hasName = Object.prototype.hasOwnProperty.call(body || {}, 'name');
 
     if (mode === 'create' && !hasName) {

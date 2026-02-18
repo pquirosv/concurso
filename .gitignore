@@ -118,7 +118,6 @@ venv/
 .tern-port
 
 # Editor/OS
-static/.vscode/
 .vscode/
 .idea/
 .DS_Store
