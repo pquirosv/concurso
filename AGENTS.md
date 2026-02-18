@@ -17,6 +17,7 @@
 ## Coding Style & Naming Conventions
 - Comment every function explaining what the function does in one line.
 - Make it simple, also check if there are redundancies or code that is not used in order to delete it.
+- Classes and layers as simple as possible that fullfil one specific function. Examples: separate business logic and controllers, one different class for pagination, etc.
 - Match existing style: CommonJS in backend JS, Vue `<script setup>` in frontend, typed Python in ingest tool.
 - Use 2-space indentation for JS/TS/Vue and 4 spaces for Python.
 - Prefer descriptive camelCase for variables/functions and kebab-case for file names where already used.
