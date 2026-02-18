@@ -78,7 +78,7 @@ const submitEdit = async (photoId: string) => {
 
   try {
     const payload = {
-      year: Number(editForm.value.year),
+      year: editForm.value.year === '' ? '' : Number(editForm.value.year),
       city: editForm.value.city.trim(),
     };
 
@@ -117,10 +117,11 @@ const deletePhoto = async (photo: AdminPhoto) => {
   }
 };
 
-// Return true when the active edit form has valid values for submission.
+// Return true when at least one editable field contains a value.
 const isEditFormValid = computed(() => {
-  const yearValue = Number(editForm.value.year);
-  return Number.isFinite(yearValue) && yearValue > 0 && editForm.value.city.trim().length > 0;
+  const hasYear = editForm.value.year !== '';
+  const hasCity = editForm.value.city.trim().length > 0;
+  return hasYear || hasCity;
 });
 
 // Initialize admin dashboard data after component mount.

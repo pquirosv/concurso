@@ -112,15 +112,13 @@ const fetchQuestion = async (sourceLabel) => {
 // Initialize data once the component is mounted.
 onMounted(async () => {
   await initDatasetInfo();
-  if (hasPhotos.value) {
-    await fetchQuestion('onMounted');
-  }
+  await fetchQuestion('onMounted');
+  
 });
 
 // Reset selection and load a new question.
 const newQuestion = async () => {
   selected.value = null;
-  if (!hasPhotos.value) return;
   await fetchQuestion('newQuestion');
 };
 
