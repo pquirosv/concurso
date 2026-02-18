@@ -45,7 +45,7 @@ adminPhotosCtrl.createPhoto = async (req, res) => {
   }
 };
 
-// Update an existing photo metadata record fields for admin edits.
+// Update editable metadata fields (year/city) by Mongo _id for admin edits; name is immutable.
 adminPhotosCtrl.updatePhoto = async (req, res) => {
   try {
     const result = await adminPhotosService.updatePhoto(req.params.id, req.body);

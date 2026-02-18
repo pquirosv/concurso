@@ -2,7 +2,8 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const PhotoSchema = new Schema({
-    name: {type: String, required: true},
+    // Keep name as the immutable stored filename; admin updates must target records by _id and cannot rename files.
+    name: {type: String, required: true, immutable: true},
     year: {type: Number, required: false},
     city: {type: String, required: false}
 });

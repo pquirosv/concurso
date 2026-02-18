@@ -1,5 +1,5 @@
-const { PaginationQuery } = require('./pagination-query');
-const { PhotoValidator } = require('./photo-validator');
+const { PaginationQuery } = require('./utils/pagination-query');
+const { PhotoValidator } = require('./utils/photo-validator');
 const { AdminPhotosService } = require('./admin-photos.service');
 
 describe('Admin photos business layer', () => {
@@ -26,7 +26,10 @@ describe('Admin photos business layer', () => {
   test('PhotoValidator validates update payload and object ids', () => {
     const validator = new PhotoValidator();
     expect(validator.validatePayload({}, 'update')).toEqual({
-      error: 'At least one field (name, year, city) is required',
+      error: 'At least one field (year, city) is required',
+    });
+    expect(validator.validatePayload({ name: 'Renamed Photo' }, 'update')).toEqual({
+      error: 'Name is immutable and cannot be updated',
     });
     expect(validator.parseObjectId('bad-id')).toBeNull();
   });

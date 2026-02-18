@@ -5,15 +5,19 @@ class PhotoValidator {
   // Validate and normalize create/update payload fields for photo metadata.
   validatePayload(body, mode = 'create') {
     const payload = {};
-    const hasName = Object.prototype.hasOwnProperty.call(body || {}, 'name');
     const hasYear = Object.prototype.hasOwnProperty.call(body || {}, 'year');
     const hasCity = Object.prototype.hasOwnProperty.call(body || {}, 'city');
+
+    const hasName = Object.prototype.hasOwnProperty.call(body || {}, 'name');
 
     if (mode === 'create' && !hasName) {
       return { error: 'Name is required' };
     }
 
     if (hasName) {
+      if (mode === 'update') {
+        return { error: 'Name is immutable and cannot be updated' };
+      }
       if (typeof body.name !== 'string' || !body.name.trim()) {
         return { error: 'Name must be a non-empty string' };
       }
@@ -43,7 +47,7 @@ class PhotoValidator {
     }
 
     if (mode === 'update' && Object.keys(payload).length === 0) {
-      return { error: 'At least one field (name, year, city) is required' };
+      return { error: 'At least one field (year, city) is required' };
     }
 
     return { payload };
