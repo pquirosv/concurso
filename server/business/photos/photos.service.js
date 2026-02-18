@@ -89,7 +89,7 @@ class PhotosService {
     async hasYearPhoto() {
         const Photo = getPhotoModel();
         const count = await Photo.exists({ year: { $exists: true } });
-        return count > 0;
+        return count;
     }
 }
 
