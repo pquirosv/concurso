@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const { getPhotoModel } = require('../../models/photo');
 const { PaginationQuery } = require('./utils/pagination-query');
@@ -65,21 +66,37 @@ class AdminPhotosService {
     return { _id: photo._id, name: photo.name, year: photo.year, city: photo.city };
   }
 
-  // Create a new photo metadata record for admin management.
-  async createPhoto(body) {
-    const { payload, error } = this.photoValidator.validatePayload(body, 'create');
+  // Create a new photo metadata record and persist the uploaded file with rollback on DB failures.
+  async createPhoto(body, file) {
+    if (!file || !file.buffer || !file.originalname) {
+      throw new AdminPhotosServiceError('Photo file is required', 400);
+    }
+
+    const sanitizedName = this.buildStoredFilename(file.originalname);
+    const { payload, error } = this.photoValidator.validatePayload({
+      name: sanitizedName,
+      year: body?.year,
+      city: body?.city,
+    }, 'create');
     if (error) {
       throw new AdminPhotosServiceError(error, 400);
     }
 
+    const filePath = await this.writePhotoFile(sanitizedName, file.buffer);
+
     const Photo = this.photoModelFactory();
-    const created = await Photo.create(payload);
-    return {
-      _id: created._id,
-      name: created.name,
-      year: created.year,
-      city: created.city,
-    };
+    try {
+      const created = await Photo.create(payload);
+      return {
+        _id: created._id,
+        name: created.name,
+        year: created.year,
+        city: created.city,
+      };
+    } catch (error) {
+      await this.cleanupFileAfterDbFailure(filePath);
+      throw error;
+    }
   }
 
   // Update an existing photo metadata record fields for admin edits.
@@ -104,8 +121,8 @@ class AdminPhotosService {
     return { _id: updated._id, name: updated.name, year: updated.year, city: updated.city };
   }
 
-  // Delete a photo metadata record and optionally remove its file from disk.
-  async deletePhoto(id, query) {
+  // Delete a photo metadata record and remove its file from disk when present.
+  async deletePhoto(id) {
     const photoId = this.validatePhotoId(id);
     const Photo = this.photoModelFactory();
     const deleted = await Photo.findByIdAndDelete(photoId, { projection: { name: 1 } }).lean();
@@ -113,7 +130,7 @@ class AdminPhotosService {
       throw new AdminPhotosServiceError('Photo not found', 404);
     }
 
-    const file = await this.removePhotoFileIfRequested(query, deleted.name);
+    const file = await this.removePhotoFile(deleted.name);
     return { deleted: true, file };
   }
 
@@ -126,11 +143,51 @@ class AdminPhotosService {
     return photoId;
   }
 
-  // Try to remove the photo file from PHOTOS_DIR using the stored filename.
-  async removePhotoFileIfRequested(query, photoName) {
-    const shouldDeleteFile = String(query?.deleteFile || '').toLowerCase() === 'true';
-    if (!shouldDeleteFile || !photoName) {
-      return { requested: shouldDeleteFile, deleted: false };
+  // Generate a safe unique stored filename preserving the original extension.
+  buildStoredFilename(originalname) {
+    const ext = this.pathModule.extname(originalname || '').toLowerCase().replace(/[^.a-z0-9]/g, '');
+    const safeExt = ext && ext.length <= 10 ? ext : '';
+    return `${Date.now()}-${crypto.randomUUID()}${safeExt}`;
+  }
+
+  // Persist an uploaded photo buffer into the configured writable photo directory.
+  async writePhotoFile(photoName, buffer) {
+    const photosDir = this.getPhotosDir();
+    if (!photosDir) {
+      throw new AdminPhotosServiceError('PHOTOS_DIR is not configured', 500);
+    }
+
+    const filePath = this.resolvePhotoPath(photosDir, photoName);
+    await this.fileSystem.promises.writeFile(filePath, buffer);
+    return filePath;
+  }
+
+  // Remove a just-written file when the DB insert fails to keep create flows transactional.
+  async cleanupFileAfterDbFailure(filePath) {
+    try {
+      await this.fileSystem.promises.unlink(filePath);
+    } catch (error) {
+      if (error && error.code !== 'ENOENT') {
+        console.error('[admin-photos] cleanup file failed after db insert error', error);
+      }
+    }
+  }
+
+  // Resolve and validate a photo file path so file operations stay inside the configured base directory.
+  resolvePhotoPath(baseDirInput, photoName) {
+    const baseDir = this.pathModule.resolve(baseDirInput);
+    const filePath = this.pathModule.resolve(baseDir, photoName);
+    const relative = this.pathModule.relative(baseDir, filePath);
+    if (relative.startsWith('..') || this.pathModule.isAbsolute(relative)) {
+      throw new AdminPhotosServiceError('Invalid photo path', 400);
+    }
+    return filePath;
+  }
+
+  // Remove the photo file from PHOTOS_DIR using the stored filename and report the outcome.
+  async removePhotoFile(photoName) {
+    if (!photoName) {
+      return { requested: true, deleted: false, warning: 'Photo name is missing' };
     }
 
     const photosDir = this.getPhotosDir();
@@ -138,17 +195,14 @@ class AdminPhotosService {
       return { requested: true, deleted: false, warning: 'PHOTOS_DIR is not configured' };
     }
 
-    const baseDir = this.pathModule.resolve(photosDir);
-    const filePath = this.pathModule.resolve(baseDir, photoName);
-    const relative = this.pathModule.relative(baseDir, filePath);
-    if (relative.startsWith('..') || this.pathModule.isAbsolute(relative)) {
-      return { requested: true, deleted: false, warning: 'Invalid photo path' };
-    }
-
     try {
+      const filePath = this.resolvePhotoPath(photosDir, photoName);
       await this.fileSystem.promises.unlink(filePath);
       return { requested: true, deleted: true };
     } catch (err) {
+      if (err instanceof AdminPhotosServiceError) {
+        return { requested: true, deleted: false, warning: err.message };
+      }
       if (err && err.code === 'ENOENT') {
         return { requested: true, deleted: false, warning: 'Photo file does not exist' };
       }

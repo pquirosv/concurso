@@ -34,9 +34,31 @@ describe('Admin photos business layer', () => {
     expect(validator.parseObjectId('bad-id')).toBeNull();
   });
 
-  test('AdminPhotosService blocks invalid file traversal on delete-file option', async () => {
+  test('AdminPhotosService blocks invalid file traversal when deleting stored files', async () => {
     const service = new AdminPhotosService({ getPhotosDir: () => '/photos' });
-    const file = await service.removePhotoFileIfRequested({ deleteFile: 'true' }, '../secrets.txt');
+    const file = await service.removePhotoFile('../secrets.txt');
     expect(file).toEqual({ requested: true, deleted: false, warning: 'Invalid photo path' });
+  });
+
+  test('AdminPhotosService removes written file if DB insert fails', async () => {
+    const writeFile = jest.fn().mockResolvedValue(undefined);
+    const unlink = jest.fn().mockResolvedValue(undefined);
+    const create = jest.fn().mockRejectedValue(new Error('db failed'));
+
+    const service = new AdminPhotosService({
+      getPhotosDir: () => '/photos',
+      fileSystem: { promises: { writeFile, unlink } },
+      photoModelFactory: () => ({ create }),
+    });
+
+    await expect(
+      service.createPhoto(
+        { year: 2020, city: 'San Jose' },
+        { originalname: 'image.png', buffer: Buffer.from('123') }
+      )
+    ).rejects.toThrow('db failed');
+
+    expect(writeFile).toHaveBeenCalledTimes(1);
+    expect(unlink).toHaveBeenCalledTimes(1);
   });
 });
