@@ -12,6 +12,7 @@ router.get('/session', admin.getSession);
 
 router.use(requireAdmin);
 router.get('/health', admin.getAdminHealth);
+// CRUD operations for photos
 router.get('/photos', adminPhotos.listPhotos);
 router.get('/photos/:id', adminPhotos.getPhotoById);
 router.post('/photos', adminPhotos.createPhoto);
