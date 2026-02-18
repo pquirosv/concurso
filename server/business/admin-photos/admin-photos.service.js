@@ -41,12 +41,12 @@ class AdminPhotosService {
     const sort = this.paginationQuery.parseSort(query);
 
     const [items, total] = await Promise.all([
-      Photo.find({}, { name: 1, year: 1, city: 1 }).sort(sort).skip(skip).limit(limit).lean(),
+      Photo.find({}, { _id: 1, name: 1, year: 1, city: 1 }).sort(sort).skip(skip).limit(limit).lean(),
       Photo.countDocuments({}),
     ]);
 
     return {
-      items,
+      items: items.map((item) => ({ _id: item._id, name: item.name, year: item.year, city: item.city })),
       page,
       limit,
       total,
@@ -58,11 +58,11 @@ class AdminPhotosService {
   async getPhotoById(id) {
     const photoId = this.validatePhotoId(id);
     const Photo = this.photoModelFactory();
-    const photo = await Photo.findById(photoId, { name: 1, year: 1, city: 1 }).lean();
+    const photo = await Photo.findById(photoId, { _id: 1, name: 1, year: 1, city: 1 }).lean();
     if (!photo) {
       throw new AdminPhotosServiceError('Photo not found', 404);
     }
-    return photo;
+    return { _id: photo._id, name: photo.name, year: photo.year, city: photo.city };
   }
 
   // Create a new photo metadata record for admin management.
@@ -94,14 +94,14 @@ class AdminPhotosService {
     const updated = await Photo.findByIdAndUpdate(photoId, payload, {
       new: true,
       runValidators: true,
-      projection: { name: 1, year: 1, city: 1 },
+      projection: { _id: 1, name: 1, year: 1, city: 1 },
     }).lean();
 
     if (!updated) {
       throw new AdminPhotosServiceError('Photo not found', 404);
     }
 
-    return updated;
+    return { _id: updated._id, name: updated.name, year: updated.year, city: updated.city };
   }
 
   // Delete a photo metadata record and optionally remove its file from disk.

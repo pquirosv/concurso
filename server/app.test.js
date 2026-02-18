@@ -155,13 +155,12 @@ describe('Photos API', () => {
     );
   });
 
-  test('PATCH /api/admin/photos/:id updates photo metadata', async () => {
+  test('PATCH /api/admin/photos/:id updates editable photo metadata fields', async () => {
     const { getPhotoModel } = require('./models/photo');
     const Photo = getPhotoModel();
     const existing = await Photo.findOne({ name: 'Photo Two' }).lean();
 
     const response = await adminAgent.patch(`/api/admin/photos/${existing._id}`).send({
-      name: 'Photo Two Updated',
       city: 'Limon',
       year: 2005,
     });
@@ -170,11 +169,25 @@ describe('Photos API', () => {
     expect(response.body).toEqual(
       expect.objectContaining({
         _id: existing._id.toString(),
-        name: 'Photo Two Updated',
+        name: 'Photo Two',
         city: 'Limon',
         year: 2005,
       })
     );
+  });
+
+
+  test('PATCH /api/admin/photos/:id rejects immutable name updates', async () => {
+    const { getPhotoModel } = require('./models/photo');
+    const Photo = getPhotoModel();
+    const existing = await Photo.findOne({ name: 'Photo Two' }).lean();
+
+    const response = await adminAgent.patch(`/api/admin/photos/${existing._id}`).send({
+      name: 'Renamed Photo',
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: 'Name is immutable and cannot be updated' });
   });
 
   test('DELETE /api/admin/photos/:id deletes metadata and reports file result', async () => {
