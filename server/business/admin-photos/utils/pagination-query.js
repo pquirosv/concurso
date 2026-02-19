@@ -1,5 +1,8 @@
+const PAGE_SIZE = Math.max(1, parseInt(process.env.PAGE_SIZE || '25', 10));
+
 // Parse and normalize admin photo list pagination and sorting query parameters.
 class PaginationQuery {
+
   // Create a query parser with a whitelist of sortable fields.
   constructor(allowedSortFields = ['name', 'year', 'city', '_id']) {
     this.allowedSortFields = new Set(allowedSortFields);
@@ -16,8 +19,8 @@ class PaginationQuery {
 
   // Parse and clamp pagination inputs used by admin photo list queries.
   parsePagination(query) {
-    const page = this.parsePositiveInt(query?.page, 1);
-    const limit = Math.min(this.parsePositiveInt(query?.limit, 25), 100);
+    const page = this.parsePositiveInt(query?.page, 1);    
+    const limit = Math.min(this.parsePositiveInt(query?.limit, PAGE_SIZE), 100);
     return { page, limit, skip: (page - 1) * limit };
   }
 
