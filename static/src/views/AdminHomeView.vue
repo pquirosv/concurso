@@ -2,6 +2,8 @@
 import axios from 'axios';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import Page from 'v-page';
+import 'v-page/lib/v-page.css';
 
 type AdminPhoto = {
   _id: string;
@@ -15,6 +17,10 @@ const router = useRouter();
 const isLoading = ref(true);
 const errorMessage = ref('');
 const photos = ref<AdminPhoto[]>([]);
+const totalPhotos = ref(0);
+const currentPage = ref(1);
+const defaultPageSize = 25;
+const pageSize = ref(defaultPageSize);
 const savingId = ref('');
 const deletingId = ref('');
 const editingId = ref('');
@@ -36,12 +42,8 @@ const ensureAuthenticated = async () => {
   return true;
 };
 
-// Convert unknown API payload into a normalized list of admin photos.
+// Convert unknown API payload into the paginated admin photo items list.
 const normalizePhotos = (payload: unknown): AdminPhoto[] => {
-  if (Array.isArray(payload)) {
-    return payload as AdminPhoto[];
-  }
-
   if (payload && typeof payload === 'object' && Array.isArray((payload as { items?: unknown[] }).items)) {
     return (payload as { items: AdminPhoto[] }).items;
   }
@@ -50,10 +52,29 @@ const normalizePhotos = (payload: unknown): AdminPhoto[] => {
 };
 
 // Fetch the admin photo list from the protected backend endpoint.
-const loadPhotos = async () => {
+const loadPhotos = async (page = currentPage.value) => {
+  currentPage.value = page;
   errorMessage.value = '';
-  const response = await axios.get('/api/admin/photos', { withCredentials: true });
+  const response = await axios.get('/api/admin/photos', {
+    params: { page },
+    withCredentials: true,
+  });
   photos.value = normalizePhotos(response.data);
+  totalPhotos.value = Number((response.data as { total?: number })?.total ?? photos.value.length);
+  pageSize.value = Number((response.data as { limit?: number })?.limit ?? defaultPageSize);
+};
+
+// Load a selected page when the admin interacts with pagination controls.
+const onPageChange = async (page: number) => {
+  isLoading.value = true;
+  try {
+    await loadPhotos(page);
+  } catch (error) {
+    console.error(error);
+    errorMessage.value = 'Failed to load admin photos.';
+  } finally {
+    isLoading.value = false;
+  }
 };
 
 // Fill the inline edit form from the selected photo row values.
@@ -105,7 +126,8 @@ const deletePhoto = async (photo: AdminPhoto) => {
 
   try {
     await axios.delete(`/api/admin/photos/${photo._id}`, { withCredentials: true });
-    photos.value = photos.value.filter((row) => row._id !== photo._id);
+    const nextPage = photos.value.length === 1 && currentPage.value > 1 ? currentPage.value - 1 : currentPage.value;
+    await loadPhotos(nextPage);
     if (editingId.value === photo._id) {
       cancelEditForm();
     }
@@ -217,6 +239,14 @@ onMounted(async () => {
             </tr>
           </tbody>
         </table>
+
+        <Page
+          v-if="totalPhotos > pageSize"
+          v-model="currentPage"
+          :total-row="totalPhotos"
+          :page-size="pageSize"
+          @change="onPageChange"
+        />
       </div>
     </section>
   </main>
