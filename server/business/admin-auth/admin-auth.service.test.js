@@ -1,15 +1,23 @@
 const { AdminAuthService, AdminAuthServiceError } = require('./admin-auth.service');
 
 // Build a lightweight mock session object with controllable regenerate/save behavior.
-const createSession = ({ regenerateError = null, saveError = null } = {}) => ({
-  cookie: {},
-  regenerate(callback) {
-    callback(regenerateError);
-  },
-  save(callback) {
-    callback(saveError);
-  },
-});
+const createSession = ({ regenerateError = null, saveError = null, replacementSession = null } = {}) => {
+  const session = {
+    cookie: {},
+    regenerate(callback) {
+      if (!regenerateError && replacementSession) {
+        session.req.session = replacementSession;
+      }
+      callback(regenerateError);
+    },
+    save(callback) {
+      callback(saveError);
+    },
+    req: { session: null },
+  };
+  session.req.session = session;
+  return session;
+};
 
 describe('AdminAuthService', () => {
   test('parseLoginBody normalizes password and remember defaults', () => {
@@ -47,6 +55,23 @@ describe('AdminAuthService', () => {
     );
     expect(session.isAdmin).toBe(true);
     expect(session.cookie.maxAge).toBe(42);
+  });
+
+  test('authenticate uses the regenerated req.session object when available', async () => {
+    const compare = jest.fn().mockResolvedValue(true);
+    const service = new AdminAuthService({
+      passwordHash: '$2a$10$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      sessionTtlMs: 42,
+      bcryptLib: { compare },
+    });
+    const replacementSession = createSession();
+    const session = createSession({ replacementSession });
+
+    await service.authenticate({ password: 'valid-password', remember: true, session });
+
+    expect(session.isAdmin).toBeUndefined();
+    expect(replacementSession.isAdmin).toBe(true);
+    expect(replacementSession.cookie.maxAge).toBe(42);
   });
 
   test('authenticate throws typed invalid-credentials error when password is wrong', async () => {

@@ -42,15 +42,16 @@ class AdminAuthService {
     }
 
     await this.regenerateSession(session);
-    session.isAdmin = true;
-    session.authenticatedAt = Date.now();
-    this.applySessionLifetime(session, normalized.remember);
-    await this.saveSession(session);
+    const activeSession = this.getActiveSession(session);
+    activeSession.isAdmin = true;
+    activeSession.authenticatedAt = Date.now();
+    this.applySessionLifetime(activeSession, normalized.remember);
+    await this.saveSession(activeSession);
 
     return {
       authenticated: true,
       remember: normalized.remember,
-      authenticatedAt: session.authenticatedAt,
+      authenticatedAt: activeSession.authenticatedAt,
     };
   }
 
@@ -95,6 +96,11 @@ class AdminAuthService {
         resolve();
       });
     });
+  }
+
+  // Resolve the current active session object after express-session regeneration.
+  getActiveSession(session) {
+    return session?.req?.session || session;
   }
 
   // Persist the updated admin session and convert callback failures into typed service errors.
