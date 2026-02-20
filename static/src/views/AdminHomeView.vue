@@ -21,8 +21,9 @@ const tableHeaders: Header[] = [
   { text: 'Editar', value: 'edit' },
   { text: 'Borrar', value: 'delete' },
 ];
-const rowsPerPage = 25;
-const rowsPerPageOptions = [10, 25, 50, 100];
+
+const rowsPerPage = 10;
+const rowsPerPageOptions = [5, 10, 25, 50];
 
 const router = useRouter();
 const isLoading = ref(true);

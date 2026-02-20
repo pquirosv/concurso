@@ -88,8 +88,8 @@ class PhotosService {
     // Check whether at least one photo has a year field.
     async hasYearPhoto() {
         const Photo = getPhotoModel();
-        const count = await Photo.exists({ year: { $exists: true } });
-        return count;
+        const exists = await Photo.exists({ year: { $exists: true } });
+        return Boolean(exists);
     }
 }
 
