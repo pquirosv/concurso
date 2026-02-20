@@ -43,9 +43,6 @@ jobs:
             mkdir -p "${{ env.DEPLOY_PATH }}"
             mkdir -p "${{ secrets.DEPLOY_WEB_PATH }}"
 
-      # Subimos el dist al path que Nginx sirve (por ejemplo /var/www/concurso)
-      # Nota: si quieres que el server quede EXACTAMENTE como dist (borrando archivos viejos),
-      # lo ideal sería rsync. Con scp no hay --delete, así que limpiamos antes.
       - name: Clean web dir (static)
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -73,6 +70,7 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          envs: SESSION_COOKIE_SECRET,ADMIN_PASSWORD_HASH
           script: |
             set -euo pipefail
 
@@ -80,3 +78,6 @@ jobs:
             git pull
 
             docker compose -f docker-compose.prod.yml up -d --build
+        env:
+          SESSION_COOKIE_SECRET: ${{ secrets.SESSION_COOKIE_SECRET }}
+          ADMIN_PASSWORD_HASH: ${{ secrets.ADMIN_PASSWORD_HASH }}
