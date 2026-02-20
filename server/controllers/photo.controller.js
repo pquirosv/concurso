@@ -20,6 +20,16 @@ photoCtrl.getPrueba = (req, res) => {
     });
 }
 
+// Initialize random pools used by the quiz and return the pool size.
+photoCtrl.startQuizRound = async (req, res) => {
+    try {
+        await photosService.initializeRandomPools();
+        res.json({ poolSize: photosService.getRandomPoolSize() });
+    } catch (err) {
+        respondServiceError(res, err, 'startQuizRound');
+    }
+}
+
 // Return a random photo document that contains a year field.
 photoCtrl.getYearPhoto = async (req, res) => {
     try {

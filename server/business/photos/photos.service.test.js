@@ -20,6 +20,13 @@ describe('PhotosService', () => {
     expect(error.details).toEqual({ field: 'year' });
   });
 
+  test('getRandomPoolSize returns configured pool size', () => {
+    const service = new PhotosService();
+
+    expect(service.getRandomPoolSize()).toEqual(expect.any(Number));
+    expect(service.getRandomPoolSize()).toBeGreaterThan(0);
+  });
+
   test('buildRandomPipeline returns expected aggregation stages', () => {
     const service = new PhotosService();
 
@@ -50,6 +57,36 @@ describe('PhotosService', () => {
     await expect(service.loadRandomPool('city')).resolves.toEqual([]);
   });
 
+  test('initializeRandomPools resets year and city pools', async () => {
+    const service = new PhotosService();
+    const resetSpy = jest.spyOn(service, 'resetRandomPool').mockResolvedValue();
+
+    await service.initializeRandomPools();
+
+    expect(resetSpy).toHaveBeenNthCalledWith(1, 'year');
+    expect(resetSpy).toHaveBeenNthCalledWith(2, 'city');
+  });
+
+  test('resetRandomPool throws typed error for unknown field', async () => {
+    const service = new PhotosService();
+
+    await expect(service.resetRandomPool('unknown')).rejects.toMatchObject({
+      name: 'PhotosServiceError',
+      code: 'INVALID_RANDOM_FIELD',
+      details: { field: 'unknown' },
+    });
+  });
+
+  test('resetRandomPool loads docs and replaces pool items', async () => {
+    const service = new PhotosService();
+    jest.spyOn(service, 'loadRandomPool').mockResolvedValue([{ name: 'A' }]);
+
+    await service.resetRandomPool('year');
+
+    expect(service.randomPools.year.items).toEqual([{ name: 'A' }]);
+    expect(service.randomPools.year.loading).toBeNull();
+  });
+
   test('getRandomPhotoByField throws typed error for unknown field', async () => {
     const service = new PhotosService();
 
@@ -70,19 +107,19 @@ describe('PhotosService', () => {
     expect(service.randomPools.year.items).toEqual([{ name: 'first' }]);
   });
 
-  test('getRandomPhotoByField loads pool once and serves next item', async () => {
+  test('getRandomPhotoByField waits for active load and serves next item', async () => {
     const service = new PhotosService();
-    const loadSpy = jest.spyOn(service, 'loadRandomPool').mockResolvedValue([{ name: 'A' }, { name: 'B' }]);
+    service.randomPools.city.loading = Promise.resolve().then(() => {
+      service.randomPools.city.items = [{ name: 'A' }, { name: 'B' }];
+      service.randomPools.city.loading = null;
+    });
 
     await expect(service.getRandomPhotoByField('city')).resolves.toEqual({ name: 'B' });
-    expect(loadSpy).toHaveBeenCalledTimes(1);
     await expect(service.getRandomPhotoByField('city')).resolves.toEqual({ name: 'A' });
-    expect(loadSpy).toHaveBeenCalledTimes(1);
   });
 
-  test('getRandomPhotoByField returns null when loaded pool is empty', async () => {
+  test('getRandomPhotoByField returns null when pool is empty and no load is active', async () => {
     const service = new PhotosService();
-    jest.spyOn(service, 'loadRandomPool').mockResolvedValue([]);
 
     await expect(service.getRandomPhotoByField('year')).resolves.toBeNull();
   });

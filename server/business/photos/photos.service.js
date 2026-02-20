@@ -23,6 +23,11 @@ class PhotosService {
         };
     }
 
+    // Return the configured size used to fetch each random pool.
+    getRandomPoolSize() {
+        return RANDOM_POOL_SIZE;
+    }
+
     // Build the aggregation pipeline used to load a random sample pool.
     buildRandomPipeline(field, size) {
         return [
@@ -40,23 +45,40 @@ class PhotosService {
         return Array.isArray(docs) ? docs : [];
     }
 
-    // Serve a random photo from an in-memory pool, refilling when empty.
+    // Rebuild all random pools so a new quiz round can start from a fresh state.
+    async initializeRandomPools() {
+        await Promise.all([
+            this.resetRandomPool('year'),
+            this.resetRandomPool('city'),
+        ]);
+    }
+
+    // Reset one random pool by replacing its content with a newly fetched sample.
+    async resetRandomPool(field) {
+        const pool = this.randomPools[field];
+        if (!pool) {
+            throw new PhotosServiceError('INVALID_RANDOM_FIELD', `Unknown random field: ${field}`, { field });
+        }
+
+        pool.loading = this.loadRandomPool(field)
+            .then((docs) => {
+                pool.items = docs;
+            })
+            .finally(() => {
+                pool.loading = null;
+            });
+
+        await pool.loading;
+    }
+
+    // Serve a random photo from an in-memory pool without refilling automatically.
     async getRandomPhotoByField(field) {
         const pool = this.randomPools[field];
         if (!pool) {
             throw new PhotosServiceError('INVALID_RANDOM_FIELD', `Unknown random field: ${field}`, { field });
         }
 
-        if (pool.items.length === 0) {
-            if (!pool.loading) {
-                pool.loading = this.loadRandomPool(field)
-                    .then((docs) => {
-                        pool.items = docs;
-                    })
-                    .finally(() => {
-                        pool.loading = null;
-                    });
-            }
+        if (pool.loading) {
             await pool.loading;
         }
 
@@ -89,7 +111,7 @@ class PhotosService {
     async hasYearPhoto() {
         const Photo = getPhotoModel();
         const count = await Photo.exists({ year: { $exists: true } });
-        return count;
+        return Boolean(count);
     }
 }
 

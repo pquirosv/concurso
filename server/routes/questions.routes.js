@@ -23,6 +23,7 @@ const noStore = (req, res, next) => {
 };
 
 router.get('/', photo.getPrueba);
+router.post('/quiz/start', noStore, photo.startQuizRound);
 router.get('/year', noStore, photo.getYearPhoto);
 router.get('/city', noStore, photo.getCityPhoto);
 router.get('/cities', cacheFor(CACHE_SECONDS), photo.getCities);

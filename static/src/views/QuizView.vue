@@ -16,10 +16,17 @@ const cities = ref([]);
 const hasInitialized = ref(false);
 const questionError = ref('');
 const questionMode = ref(() => '/api/year');
+const isRoundActive = ref(false);
+const score = ref(0);
+const questionsRemaining = ref(0);
+const startButtonLabel = ref('Comienza concurso');
+const isStartingRound = ref(false);
+const isQuestionLoading = ref(false);
 const isQuestionReady = computed(() => Boolean(questions.value.name) && questions.value.options.length > 0);
 const showEmptyState = computed(() => hasInitialized.value && !hasPhotos.value);
 const showQuestionError = computed(() => hasInitialized.value && hasPhotos.value && Boolean(questionError.value));
-const showMain = computed(() => hasInitialized.value && hasPhotos.value && isQuestionReady.value);
+const showRoundSummary = computed(() => hasInitialized.value && hasPhotos.value && !isRoundActive.value);
+const showMain = computed(() => isRoundActive.value && isQuestionReady.value && !showQuestionError.value);
 
 // Generate a random integer in [0, maxExclusive) using Math.random.
 const randomInt = (maxExclusive) => Math.floor(Math.random() * maxExclusive);
@@ -32,6 +39,17 @@ const shuffleCrypto = (items) => {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
+};
+
+// Reset the current rendered question state and selected answer.
+const resetQuestionState = () => {
+  questions.value = {
+    name: '',
+    mode: '',
+    answer: 0,
+    options: [],
+  };
+  selected.value = null;
 };
 
 // Fetch dataset metadata once (photo count, year availability, cities list).
@@ -94,6 +112,7 @@ const setCityQuestion = (responseData) => {
 // Fetch a new question and populate the UI state.
 const fetchQuestion = async () => {
   questionError.value = '';
+  isQuestionLoading.value = true;
   try {
     const apiUrl = questionMode.value();
     const response = await axios.get(apiUrl);
@@ -108,20 +127,73 @@ const fetchQuestion = async () => {
   } catch (error) {
     console.error(error);
     questionError.value = 'No se pudo cargar una pregunta. Vuelve a intentarlo.';
+  } finally {
+    isQuestionLoading.value = false;
   }
+};
+
+// Start a new quiz round by loading fresh random pools and the first question.
+const startRound = async () => {
+  questionError.value = '';
+  isStartingRound.value = true;
+  startButtonLabel.value = 'Cargando...';
+  resetQuestionState();
+  try {
+    const response = await axios.post('/api/quiz/start');
+    const poolSize = Number(response.data?.poolSize || 0);
+    questionsRemaining.value = poolSize;
+    score.value = 0;
+    isRoundActive.value = poolSize > 0;
+    if (isRoundActive.value) {
+      await fetchQuestion();
+      startButtonLabel.value = 'Comenzar partida';
+      return;
+    }
+    questionError.value = 'No hay preguntas disponibles para iniciar una partida.';
+    startButtonLabel.value = 'Comenzar partida';
+  } catch (error) {
+    console.error(error);
+    questionError.value = 'No se pudo iniciar la partida. Vuelve a intentarlo.';
+    isRoundActive.value = false;
+    startButtonLabel.value = 'Comenzar partida';
+  } finally {
+    isStartingRound.value = false;
+  }
+};
+
+// Validate the selected answer, update score, and move to next question or summary.
+const nextQuestion = async () => {
+  if (selected.value === null) return;
+
+  if (String(selected.value) === String(questions.value.answer)) {
+    score.value += 1;
+  }
+
+  questionsRemaining.value = Math.max(0, questionsRemaining.value - 1);
+
+  if (questionsRemaining.value === 0) {
+    isRoundActive.value = false;
+    resetQuestionState();
+    return;
+  }
+
+  resetQuestionState();
+  await fetchQuestion();
+};
+
+// Retry loading the current question when question fetch fails.
+const retryQuestion = async () => {
+  if (!isRoundActive.value) {
+    await startRound();
+    return;
+  }
+  await fetchQuestion();
 };
 
 // Initialize data once the component is mounted.
 onMounted(async () => {
   await initDatasetInfo();
-  await fetchQuestion();
 });
-
-// Reset selection and load a new question.
-const newQuestion = async () => {
-  selected.value = null;
-  await fetchQuestion();
-};
 </script>
 
 <template>
@@ -133,7 +205,13 @@ const newQuestion = async () => {
     <div v-else-if="showQuestionError" class="empty-state">
       <span class="empty-message">{{ questionError }}</span>
       <div class="buttonContainer">
-        <button class="slctButton" @click="newQuestion">Reintentar</button>
+        <button class="slctButton" :disabled="isStartingRound || isQuestionLoading" @click="retryQuestion">Reintentar</button>
+      </div>
+    </div>
+    <div v-else-if="showRoundSummary" class="empty-state">
+      <span class="empty-message">PUNTUACIÓN: {{ score }}</span>
+      <div class="buttonContainer">
+        <button class="slctButton" :disabled="isStartingRound" @click="startRound">{{ startButtonLabel }}</button>
       </div>
     </div>
     <div v-else-if="showMain" class="mainElement">
@@ -166,7 +244,7 @@ const newQuestion = async () => {
           </label>
         </div>
         <div class="buttonContainer">
-          <button class="slctButton" :disabled="selected === null" @click="newQuestion">
+          <button class="slctButton" :disabled="selected === null || isQuestionLoading" @click="nextQuestion">
             {{ selected == null ? 'Selecciona una Opción' : 'Siguiente pregunta' }}
           </button>
         </div>
