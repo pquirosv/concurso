@@ -1,4 +1,4 @@
-const windowMs = Math.max(1000, parseInt(process.env.ADMIN_LOGIN_RATE_LIMIT_WINDOW_MS || '600000', 10)); // Default to 10 minutes, minimum 1 second.
+const windowMs = Math.max(10000, parseInt(process.env.ADMIN_LOGIN_RATE_LIMIT_WINDOW_MS || '600000', 10)); // Default to 10 minutes
 const maxAttempts = Math.max(3, parseInt(process.env.ADMIN_LOGIN_RATE_LIMIT_MAX || '5', 10)); 
 const cleanupIntervalMs = Math.max(windowMs, 60000);
 const attemptBuckets = new Map(); // In-memory buckets for tracking login attempts per IP.
