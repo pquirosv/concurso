@@ -77,6 +77,7 @@ Mapped from host:
 
 - Source photos are read from host `SOURCE_DIR`.
 - Ingest copies/normalizes files into host `PHOTOS_DIR`.
+- API writes admin uploads to host `PHOTOS_DIR`.
 - Nginx serves photos from `PHOTOS_DIR` at `/fotos/`.
 - Mongo data is persisted in the `mongo-data` Docker volume.
 
@@ -112,7 +113,7 @@ There is no Nginx service in `docker-compose.prod.yml`.
 docker compose -f docker-compose.prod.yml run --rm ingest
 ```
 
-Ensure host folders for `SOURCE_DIR` and `PHOTOS_DIR` exist and are mounted correctly before running ingest.
+Ensure host folders for `SOURCE_DIR` and `PHOTOS_DIR` exist and are mounted correctly before running ingest and admin uploads.
 
 ## Notes
 

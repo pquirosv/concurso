@@ -51,6 +51,13 @@ docker compose run --rm ingest
   - `GET /api/admin/session`
   - `POST /api/admin/logout`
 
+
+### Admin Photo API Contract
+
+- Use Mongo `_id` as the only identity for edit/delete operations (`PATCH /api/admin/photos/:id`, `DELETE /api/admin/photos/:id`).
+- Photo `name` is the immutable stored filename and cannot be changed through PATCH.
+- Admin list/read/update responses include `_id` for table actions, while display fields remain `name`, `year`, and `city`.
+
 Generate a bcrypt hash for `ADMIN_PASSWORD_HASH`:
 
 ```bash

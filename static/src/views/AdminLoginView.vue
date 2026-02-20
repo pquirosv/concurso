@@ -53,8 +53,8 @@ const submitLogin = async () => {
 
     const redirectPath = consumeRedirectPath();
     await router.push(redirectPath);
-  } catch (error: any) {
-    const status = error?.response?.status;
+  } catch (error: unknown) {
+    const status = axios.isAxiosError(error) ? error.response?.status : undefined;
     if (status === 401) {
       errorMessage.value = 'Invalid password.';
     } else if (status === 429) {

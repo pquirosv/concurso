@@ -17,7 +17,9 @@
 ## Coding Style & Naming Conventions
 - Comment every function explaining what the function does in one line.
 - Make it simple, also check if there are redundancies or code that is not used in order to delete it.
+- Classes and layers as simple as possible that fullfil one specific function. Examples: separate business logic and controllers, one different class for pagination, etc.
 - Match existing style: CommonJS in backend JS, Vue `<script setup>` in frontend, typed Python in ingest tool.
+- Frontend CSS rule: unless strictly necessary, keep styles in `static/src/style.css` and avoid local `<style>` blocks inside `.vue` files.
 - Use 2-space indentation for JS/TS/Vue and 4 spaces for Python.
 - Prefer descriptive camelCase for variables/functions and kebab-case for file names where already used.
 - Keep API route/controller naming aligned (`getYearPhoto`, `getCityPhoto`, etc.).
@@ -41,3 +43,9 @@
 ## Security & Configuration Tips
 - Never commit secrets; keep environment values in local `.env`.
 - `SOURCE_DIR` and `PHOTOS_DIR` must be absolute host paths and should exist before running ingest/compose workflows.
+
+## Skills
+A skill is a set of local instructions to follow that is stored in a `SKILL.md` file.
+
+### Available skills
+- vue: Use when editing `.vue` files, creating Vue 3 components/composables, or testing Vue code. (file: .agents/skills/vue/SKILL.md). There are a lot of references in .agents/skills/vue/references/.

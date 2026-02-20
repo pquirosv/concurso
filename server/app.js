@@ -13,8 +13,11 @@ const {
   sessionSecret,
   validateAdminAuthEnv,
 } = require('./config/admin-auth');
+const { validatePhotoStorageEnv } = require('./config/photo-storage');
+const { createRateLimiter } = require('./middlewares/rate-limit.middleware');
 
 validateAdminAuthEnv();
+validatePhotoStorageEnv();
 require('./database');
 
 const app = express();
@@ -23,10 +26,6 @@ const app = express();
 app.set('port', process.env.PORT || 3000);
 app.set('trust proxy', 1);
 
-const RATE_LIMIT_WINDOW_MS = Math.max(1000, parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10)); // Default to 1 minute
-const RATE_LIMIT_MAX = Math.max(1, parseInt(process.env.RATE_LIMIT_MAX || '120', 10));
-const RATE_LIMIT_CLEANUP_INTERVAL_MS = Math.max(RATE_LIMIT_WINDOW_MS, 60000);
-const rateLimitBuckets = new Map();
 const allowedOrigins = ['http://localhost:5173', 'http://localhost:8080'];
 const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/concurso';
 
@@ -37,8 +36,6 @@ const sessionStore = MongoStore.create({
   autoRemove: 'native',
 });
 
-// Resolve a stable client key for rate limiting (supports proxies).
-const getClientKey = (req) => req.ip || req.socket?.remoteAddress || 'unknown';
 
 // Check if the request Origin is allowed for credentialed CORS.
 const isAllowedOrigin = (origin) => !origin || allowedOrigins.includes(origin);
@@ -52,48 +49,8 @@ const corsOrigin = (origin, callback) => {
   callback(new Error('Not allowed by CORS'));
 };
 
-// In-memory fixed-window rate limiter with standard response headers.
-const rateLimiter = (req, res, next) => {
-  const now = Date.now();
-  const key = getClientKey(req);
-  let bucket = rateLimitBuckets.get(key);
-
-  if (!bucket || now - bucket.windowStart >= RATE_LIMIT_WINDOW_MS) {
-    bucket = { windowStart: now, count: 0 };
-    rateLimitBuckets.set(key, bucket);
-  }
-
-  bucket.count += 1;
-  const remaining = Math.max(0, RATE_LIMIT_MAX - bucket.count);
-
-  // Add standard rate limit headers
-  res.set('RateLimit-Limit', RATE_LIMIT_MAX.toString());
-  res.set('RateLimit-Remaining', remaining.toString());
-  const retryAfterSeconds = Math.ceil((bucket.windowStart + RATE_LIMIT_WINDOW_MS - now) / 1000);
-  res.set('RateLimit-Reset', retryAfterSeconds.toString());
-
-  // If limit exceeded, respond with 429 and Retry-After header
-  if (bucket.count > RATE_LIMIT_MAX) {
-    res.set('Retry-After', retryAfterSeconds.toString());
-    return res.status(429).json({ error: 'Rate limit exceeded' });
-  }
-
-  next();
-};
-
-// Periodically drop expired rate-limit buckets to avoid unbounded growth.
-const cleanupTimer = setInterval(() => {
-  const now = Date.now();
-  for (const [key, bucket] of rateLimitBuckets.entries()) {
-    if (now - bucket.windowStart > RATE_LIMIT_WINDOW_MS) {
-      rateLimitBuckets.delete(key);
-    }
-  }
-}, RATE_LIMIT_CLEANUP_INTERVAL_MS);
-
-if (typeof cleanupTimer.unref === 'function') {
-  cleanupTimer.unref();
-}
+// Build the app-wide API rate limiter with environment-driven defaults.
+const rateLimiter = createRateLimiter();
 
 // Middlewares
 app.use(

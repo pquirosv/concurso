@@ -1,3 +1,6 @@
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 const request = require('supertest');
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
@@ -7,6 +10,7 @@ describe('Photos API', () => {
   let mongoServer;
   let app;
   let adminAgent;
+  let photosDir;
   const adminPassword = 'test-admin-password';
 
   beforeAll(async () => {
@@ -16,6 +20,8 @@ describe('Photos API', () => {
     process.env.SESSION_COOKIE_SECRET = 'test-session-secret';
     process.env.ADMIN_PASSWORD_HASH = bcrypt.hashSync(adminPassword, 10);
     process.env.ADMIN_SESSION_TTL_DAYS = '7';
+    photosDir = fs.mkdtempSync(path.join(os.tmpdir(), 'concurso-photos-'));
+    process.env.PHOTOS_DIR = photosDir;
 
     jest.resetModules();
 
@@ -37,6 +43,9 @@ describe('Photos API', () => {
     } finally {
       if (mongoServer) {
         await mongoServer.stop({ doCleanup: true, force: true });
+      }
+      if (photosDir) {
+        fs.rmSync(photosDir, { recursive: true, force: true });
       }
     }
   });
@@ -101,6 +110,116 @@ describe('Photos API', () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ status: 'admin ok' });
+  });
+
+  test('GET /api/admin/photos returns full admin photo list for client pagination', async () => {
+    const response = await adminAgent.get('/api/admin/photos');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(expect.any(Array));
+    expect(response.body).toHaveLength(3);
+    expect(response.body[0]).toEqual(
+      expect.objectContaining({
+        _id: expect.any(String),
+        name: expect.any(String),
+      })
+    );
+  });
+
+  test('GET /api/admin/photos/:id returns single photo', async () => {
+    const { getPhotoModel } = require('./models/photo');
+    const Photo = getPhotoModel();
+    const seeded = await Photo.findOne({ name: 'Photo One' }).lean();
+
+    const response = await adminAgent.get(`/api/admin/photos/${seeded._id}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        _id: seeded._id.toString(),
+        name: 'Photo One',
+        year: 1990,
+        city: 'San Jose',
+      })
+    );
+  });
+
+  test('POST /api/admin/photos creates photo metadata and stores file', async () => {
+    const response = await adminAgent
+      .post('/api/admin/photos')
+      .field('year', '2010')
+      .field('city', 'Heredia')
+      .attach('photo', Buffer.from('fake-image-bytes'), 'photo-four.jpg');
+
+    expect(response.status).toBe(201);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        _id: expect.any(String),
+        name: expect.stringMatching(/\.jpg$/),
+        year: 2010,
+        city: 'Heredia',
+      })
+    );
+
+    const storedPath = path.join(photosDir, response.body.name);
+    expect(fs.existsSync(storedPath)).toBe(true);
+  });
+
+  test('PATCH /api/admin/photos/:id updates editable photo metadata fields', async () => {
+    const { getPhotoModel } = require('./models/photo');
+    const Photo = getPhotoModel();
+    const existing = await Photo.findOne({ name: 'Photo Two' }).lean();
+
+    const response = await adminAgent.patch(`/api/admin/photos/${existing._id}`).send({
+      city: 'Limon',
+      year: 2005,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        _id: existing._id.toString(),
+        name: 'Photo Two',
+        city: 'Limon',
+        year: 2005,
+      })
+    );
+  });
+
+
+  test('PATCH /api/admin/photos/:id rejects immutable name updates', async () => {
+    const { getPhotoModel } = require('./models/photo');
+    const Photo = getPhotoModel();
+    const existing = await Photo.findOne({ name: 'Photo Two' }).lean();
+
+    const response = await adminAgent.patch(`/api/admin/photos/${existing._id}`).send({
+      name: 'Renamed Photo',
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: 'Name is immutable and cannot be updated' });
+  });
+
+  test('DELETE /api/admin/photos/:id deletes metadata and stored file', async () => {
+    const { getPhotoModel } = require('./models/photo');
+    const Photo = getPhotoModel();
+    const removable = await Photo.create({ name: 'to-delete.jpg', year: 1999, city: 'Puntarenas' });
+    const removableFile = path.join(photosDir, 'to-delete.jpg');
+    fs.writeFileSync(removableFile, 'delete-me');
+
+    const response = await adminAgent.delete(`/api/admin/photos/${removable._id}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        deleted: true,
+        file: expect.objectContaining({ requested: true, deleted: true }),
+      })
+    );
+
+    const stillThere = await Photo.findById(removable._id);
+    expect(stillThere).toBeNull();
+    expect(fs.existsSync(removableFile)).toBe(false);
   });
 
 });
