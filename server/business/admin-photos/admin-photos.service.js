@@ -3,7 +3,6 @@ const path = require('path');
 const crypto = require('crypto');
 
 const { getPhotoModel } = require('../../models/photo');
-const { PaginationQuery } = require('./utils/pagination-query');
 const { PhotoValidator } = require('./utils/photo-validator');
 
 // Represent an expected business error with an HTTP status code.
@@ -21,38 +20,23 @@ class AdminPhotosService {
   // Build an admin photo service with default dependencies.
   constructor({
     photoModelFactory = getPhotoModel,
-    paginationQuery = new PaginationQuery(),
     photoValidator = new PhotoValidator(),
     fileSystem = fs,
     pathModule = path,
     getPhotosDir = () => process.env.PHOTOS_DIR,
   } = {}) {
     this.photoModelFactory = photoModelFactory;
-    this.paginationQuery = paginationQuery;
     this.photoValidator = photoValidator;
     this.fileSystem = fileSystem;
     this.pathModule = pathModule;
     this.getPhotosDir = getPhotosDir;
   }
 
-  // Return a paginated admin list of photos with sorting support.
-  async listPhotos(query) {
+  // Return the full admin list of photos for client-side table pagination.
+  async listPhotos() {
     const Photo = this.photoModelFactory();
-    const { page, limit, skip } = this.paginationQuery.parsePagination(query);
-    const sort = this.paginationQuery.parseSort(query);
-
-    const [items, total] = await Promise.all([
-      Photo.find({}, { _id: 1, name: 1, year: 1, city: 1 }).sort(sort).skip(skip).limit(limit).lean(),
-      Photo.countDocuments({}),
-    ]);
-
-    return {
-      items: items.map((item) => ({ _id: item._id, name: item.name, year: item.year, city: item.city })),
-      page,
-      limit,
-      total,
-      totalPages: Math.max(1, Math.ceil(total / limit)),
-    };
+    const items = await Photo.find({}, { _id: 1, name: 1, year: 1, city: 1 }).sort({ _id: -1 }).lean();
+    return items.map((item) => ({ _id: item._id, name: item.name, year: item.year, city: item.city }));
   }
 
   // Return one photo record by id for admin edit workflows.

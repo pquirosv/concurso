@@ -53,10 +53,10 @@ const parsePhotoUploadRequest = async (req) => {
   };
 };
 
-// Return a paginated admin list of photos with sorting support.
+// Return the full admin list of photos for client-side pagination in the UI.
 adminPhotosCtrl.listPhotos = async (req, res) => {
   try {
-    const result = await adminPhotosService.listPhotos(req.query);
+    const result = await adminPhotosService.listPhotos();
     return res.json(result);
   } catch (error) {
     return sendErrorResponse(res, error, 'listPhotos');

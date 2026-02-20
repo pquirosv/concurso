@@ -14,9 +14,11 @@ const hasPhotos = ref(false);
 const hasYearPhoto = ref(false);
 const cities = ref([]);
 const hasInitialized = ref(false);
+const questionError = ref('');
 const questionMode = ref(() => '/api/year');
 const isQuestionReady = computed(() => Boolean(questions.value.name) && questions.value.options.length > 0);
 const showEmptyState = computed(() => hasInitialized.value && !hasPhotos.value);
+const showQuestionError = computed(() => hasInitialized.value && hasPhotos.value && Boolean(questionError.value));
 const showMain = computed(() => hasInitialized.value && hasPhotos.value && isQuestionReady.value);
 
 // Generate a random integer in [0, maxExclusive) using Math.random.
@@ -90,10 +92,10 @@ const setCityQuestion = (responseData) => {
 };
 
 // Fetch a new question and populate the UI state.
-const fetchQuestion = async (sourceLabel) => {
+const fetchQuestion = async () => {
+  questionError.value = '';
   try {
     const apiUrl = questionMode.value();
-    console.log(`fetching question (${sourceLabel}):`, apiUrl);
     const response = await axios.get(apiUrl);
     const responseData = response.data;
 
@@ -103,28 +105,22 @@ const fetchQuestion = async (sourceLabel) => {
     else if (apiUrl === '/api/city') {
       setCityQuestion(responseData);
     }
-    console.log(`questions updated (${sourceLabel}):`, { ...questions.value });
   } catch (error) {
     console.error(error);
+    questionError.value = 'No se pudo cargar una pregunta. Vuelve a intentarlo.';
   }
 };
 
 // Initialize data once the component is mounted.
 onMounted(async () => {
   await initDatasetInfo();
-  await fetchQuestion('onMounted');
-  
+  await fetchQuestion();
 });
 
 // Reset selection and load a new question.
 const newQuestion = async () => {
   selected.value = null;
-  await fetchQuestion('newQuestion');
-};
-
-// Handle selecting an answer option.
-const setAnswer = (event) => {
-  console.log('option clicked:', event?.target?.value);
+  await fetchQuestion();
 };
 </script>
 
@@ -134,7 +130,13 @@ const setAnswer = (event) => {
     <div v-if="showEmptyState" class="empty-state">
       <span class="empty-message">No hay fotos disponibles. Por favor, sube algunas fotos para comenzar el concurso.</span>
     </div>
-    <div v-show="showMain" class="mainElement">
+    <div v-else-if="showQuestionError" class="empty-state">
+      <span class="empty-message">{{ questionError }}</span>
+      <div class="buttonContainer">
+        <button class="slctButton" @click="newQuestion">Reintentar</button>
+      </div>
+    </div>
+    <div v-else-if="showMain" class="mainElement">
       <div class="quiz">
         <div class="quiz-info">
           <span v-if="questions.mode === 'year'" class="question">¿De que año es esta foto?</span>
@@ -159,7 +161,6 @@ const setAnswer = (event) => {
               name="question-options"
               :value="option"
               :disabled="selected !== null"
-              @change="setAnswer"
             />
             <span>{{ option }}</span>
           </label>

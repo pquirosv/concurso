@@ -1,6 +1,6 @@
 :root {
   --color-text: #FFF;
-  --color-muted: #8F8F8F;
+  --color-muted: #bbbbbb;
   --color-bg: #1e0f33;
   --color-panel: #382a4b;
   --color-option: #271c36;
@@ -129,11 +129,6 @@ h1 {
   font-size: 1.25rem;
 }
 
-.quiz-info.score {
-  color: var(--color-text);
-  font-size: 1.25rem;
-}
-
 .empty-state {
   padding: 1.5rem;
   background-color: var(--color-panel);
@@ -212,12 +207,6 @@ h1 {
   cursor: auto;
 }
 
-h2 {
-  font-size: 2rem;
-  margin-bottom: 2rem;
-  text-align: center;
-}
-
 p {
   color: var(--color-muted);
   font-size: 1.5rem;
@@ -226,6 +215,8 @@ p {
 
 .admin-page {
   justify-content: center;
+  min-height: 100vh;
+  padding: 1.5rem;
 }
 
 .admin-card {
@@ -236,14 +227,16 @@ p {
   border-radius: 0.75rem;
 }
 
+.admin-card-table {
+  width: min(94vw, 72rem);
+  min-height: calc(100vh - 3rem);
+  max-width: none;
+}
+
 .admin-form {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  margin-top: 1rem;
-}
-
-.admin-field {
   margin-top: 1rem;
 }
 
@@ -298,6 +291,69 @@ p {
   color: var(--color-danger);
   font-size: 0.95rem;
   text-align: left;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  --admin-table-surface: #5a4e6b;
+  --easy-table-border: 1px solid var(--color-option);
+  --easy-table-row-border: 1px solid #57446f;
+  --easy-table-header-background-color: var(--color-option);
+  --easy-table-footer-background-color: var(--color-option);
+  --easy-table-header-font-color: var(--color-text);
+  --easy-table-body-row-background-color: var(--admin-table-surface);
+  --easy-table-body-row-font-color: var(--color-text);
+  --easy-table-body-even-row-background-color: #665a78;
+  --easy-table-body-even-row-font-color: var(--color-text);
+  --easy-table-body-row-hover-background-color: var(--color-option-hover);
+  --easy-table-body-row-hover-font-color: var(--color-text);
+  --easy-table-footer-font-color: var(--color-text);
+  --easy-table-message-font-color: var(--color-muted);
+}
+
+.admin-data-table {
+  min-width: 48rem;
+  font-size: 1rem;
+}
+
+.admin-data-table thead th {
+  font-size: 1rem;
+  font-weight: 700;
+  padding-top: 0.85rem;
+  padding-bottom: 0.85rem;
+}
+
+.admin-data-table tbody td {
+  font-size: 1rem;
+  padding-top: 0.9rem;
+  padding-bottom: 0.9rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.photo-link {
+  color: var(--color-muted);
+  text-decoration: none;
+}
+
+.photo-link:hover,
+.photo-link:focus-visible {
+  text-decoration: underline;
+}
+
+.admin-button {
+  cursor: pointer;
+}
+
+.admin-button.secondary {
+  opacity: 0.9;
+}
+
+.admin-button.danger {
+  color: #a11;
 }
 
 @media (orientation: portrait) {
@@ -357,8 +413,7 @@ p {
     flex: 1 1 15rem;
   }
 
-  .quiz-info .question,
-  .quiz-info.score {
+  .quiz-info .question {
     font-size: 1rem;
   }
 

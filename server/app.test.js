@@ -112,20 +112,18 @@ describe('Photos API', () => {
     expect(response.body).toEqual({ status: 'admin ok' });
   });
 
-  test('GET /api/admin/photos returns paginated admin photo list', async () => {
-    const response = await adminAgent.get('/api/admin/photos?page=1&limit=2&sortBy=name&sortDir=asc');
+  test('GET /api/admin/photos returns full admin photo list for client pagination', async () => {
+    const response = await adminAgent.get('/api/admin/photos');
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual(
+    expect(response.body).toEqual(expect.any(Array));
+    expect(response.body).toHaveLength(3);
+    expect(response.body[0]).toEqual(
       expect.objectContaining({
-        page: 1,
-        limit: 2,
-        total: 3,
-        totalPages: 2,
+        _id: expect.any(String),
+        name: expect.any(String),
       })
     );
-    expect(response.body.items).toHaveLength(2);
-    expect(response.body.items[0].name <= response.body.items[1].name).toBe(true);
   });
 
   test('GET /api/admin/photos/:id returns single photo', async () => {

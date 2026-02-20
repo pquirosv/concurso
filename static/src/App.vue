@@ -10,7 +10,7 @@ const inAdminRoute = computed(() => String(route.name || '').startsWith('admin')
 <template>
   <div class="shell">
     <header class="top-nav">
-      <RouterLink v-if="inAdminRoute" class="top-link" to="/">Return to Quiz</RouterLink>
+      <RouterLink v-if="inAdminRoute" class="top-link" to="/">Concurso</RouterLink>
       <RouterLink v-else class="top-link" to="/admin">Admin</RouterLink>
     </header>
     <RouterView />

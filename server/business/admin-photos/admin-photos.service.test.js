@@ -1,18 +1,26 @@
-const { PaginationQuery } = require('./utils/pagination-query');
 const { PhotoValidator } = require('./utils/photo-validator');
 const { AdminPhotosService } = require('./admin-photos.service');
 
 describe('Admin photos business layer', () => {
-  test('PaginationQuery parses pagination defaults and limit clamp', () => {
-    const query = new PaginationQuery();
-    expect(query.parsePagination({})).toEqual({ page: 1, limit: 25, skip: 0 });
-    expect(query.parsePagination({ page: '3', limit: '1000' })).toEqual({ page: 3, limit: 100, skip: 200 });
-  });
+  test('AdminPhotosService listPhotos returns full photo list for client-side pagination', async () => {
+    const lean = jest.fn().mockResolvedValue([
+      { _id: '2', name: 'Photo Two', year: 2001, city: 'Cartago' },
+      { _id: '1', name: 'Photo One', year: 1990, city: 'San Jose' },
+    ]);
+    const sort = jest.fn().mockReturnValue({ lean });
+    const find = jest.fn().mockReturnValue({ sort });
+    const service = new AdminPhotosService({
+      photoModelFactory: () => ({ find }),
+    });
 
-  test('PaginationQuery parses sort with field whitelist and direction', () => {
-    const query = new PaginationQuery();
-    expect(query.parseSort({ sortBy: 'name', sortDir: 'asc' })).toEqual({ name: 1, _id: -1 });
-    expect(query.parseSort({ sortBy: 'createdAt', sortDir: 'asc' })).toEqual({ _id: -1 });
+    const result = await service.listPhotos();
+
+    expect(find).toHaveBeenCalledWith({}, { _id: 1, name: 1, year: 1, city: 1 });
+    expect(sort).toHaveBeenCalledWith({ _id: -1 });
+    expect(result).toEqual([
+      { _id: '2', name: 'Photo Two', year: 2001, city: 'Cartago' },
+      { _id: '1', name: 'Photo One', year: 1990, city: 'San Jose' },
+    ]);
   });
 
   test('PhotoValidator validates create payload requirements', () => {
