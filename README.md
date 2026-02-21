@@ -69,9 +69,8 @@ When `CORS_ALLOWED_ORIGINS` is empty or missing, the API falls back to hardcoded
 
 ## Documentation Map
 
-- Full local Docker and production runtime guide: `DOCKER.md`
 - Full local Docker and production runtime guide: [`DOCKER.md`](DOCKER.md)
-- Frontend-only Vite details: `static/README.md`
+- Frontend-only Vite details: [`static/README.md`](./static/README.md]
 
 ## Project Structure
 
