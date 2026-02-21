@@ -19,7 +19,7 @@ SOURCE_DIR=/path/to/your/photos
 PHOTOS_DIR=/path/to/your/photos_out
 SESSION_COOKIE_SECRET=replace-with-a-long-random-secret
 ADMIN_PASSWORD_HASH=replace-with-bcrypt-hash
-ADMIN_SESSION_TTL_DAYS=7
+CORS_ALLOWED_ORIGINS=https://concurso.pabloquiros.click
 ```
 
 Use absolute host paths.
@@ -29,6 +29,9 @@ Generate `ADMIN_PASSWORD_HASH` with:
 ```bash
 node -e "const bcrypt=require('bcryptjs'); console.log(bcrypt.hashSync('your-admin-password', 10));"
 ```
+
+`CORS_ALLOWED_ORIGINS` is the runtime allowlist (single value, comma-separated values, or list-style syntax like `['https://a.com','https://b.com']`).  
+When `CORS_ALLOWED_ORIGINS` is empty or missing, the API falls back to hardcoded local origins (`http://localhost:8080` and `http://localhost:5173`).
 
 ### 2. Prepare folders
 

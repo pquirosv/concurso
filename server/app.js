@@ -26,7 +26,7 @@ const app = express();
 app.set('port', process.env.PORT || 3000);
 app.set('trust proxy', 1);
 
-const allowedOrigins = ['http://localhost:5173', 'http://localhost:8080'];
+const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS || ['http://localhost:5173', 'http://localhost:8080'];
 const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/concurso';
 
 const sessionStore = MongoStore.create({
@@ -36,9 +36,26 @@ const sessionStore = MongoStore.create({
   autoRemove: 'native',
 });
 
+// Resolve active CORS origins from env when present, otherwise fallback to hardcoded local origins.
+const resolveAllowedOrigins = () => {
+  try {
+    const parsed = JSON.parse(allowedOrigins);
+    if (Array.isArray(parsed) && parsed.every((o) => typeof o === 'string')) {
+      return parsed;
+    }
+    if (typeof parsed === 'string') {
+      return [parsed];
+    }
+  } catch (error) {
+    console.error('Failed to parse allowedOrigins:', error);
+  }
+  return allowedOrigins;
+};
+
+const activeAllowedOrigins = resolveAllowedOrigins();
 
 // Check if the request Origin is allowed for credentialed CORS.
-const isAllowedOrigin = (origin) => !origin || allowedOrigins.includes(origin);
+const isAllowedOrigin = (origin) => !origin || activeAllowedOrigins.includes(origin);
 
 // Dynamically validate origin for credentialed CORS requests.
 const corsOrigin = (origin, callback) => {

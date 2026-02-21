@@ -21,6 +21,7 @@ describe('Photos API', () => {
     process.env.ADMIN_PASSWORD_HASH = bcrypt.hashSync(adminPassword, 10);
     process.env.ADMIN_SESSION_TTL_DAYS = '7';
     process.env.ADMIN_LOGIN_RATE_LIMIT_MAX = '100';
+    process.env.CORS_ALLOWED_ORIGINS = 'https://admin.example.com';
     photosDir = fs.mkdtempSync(path.join(os.tmpdir(), 'concurso-photos-'));
     process.env.PHOTOS_DIR = photosDir;
 
@@ -74,6 +75,28 @@ describe('Photos API', () => {
         year: expect.any(Number),
       })
     );
+  });
+
+  test('GET /api/admin/session allows single configured CORS origin from env', async () => {
+    const response = await request(app).get('/api/admin/session').set('Origin', 'https://admin.example.com');
+
+    expect(response.status).toBe(200);
+    expect(response.headers['access-control-allow-origin']).toBe('https://admin.example.com');
+    expect(response.headers['access-control-allow-credentials']).toBe('true');
+  });
+
+  test('GET /api/admin/session allows list-style configured CORS origins from env', async () => {
+    process.env.CORS_ALLOWED_ORIGINS = "['https://concurso.pabloquiros.click', 'https://otroconcurso.pabloquiros.xyz']";
+    jest.resetModules();
+    const appWithListOrigins = require('./app');
+
+    const response = await request(appWithListOrigins)
+      .get('/api/admin/session')
+      .set('Origin', 'https://otroconcurso.pabloquiros.xyz');
+
+    expect(response.status).toBe(200);
+    expect(response.headers['access-control-allow-origin']).toBe('https://otroconcurso.pabloquiros.xyz');
+    expect(response.headers['access-control-allow-credentials']).toBe('true');
   });
 
   test('POST /api/admin/login returns 401 with wrong password', async () => {

@@ -15,7 +15,7 @@ services:
       - MONGODB_URI=mongodb://mongo:27017/concurso
       - SESSION_COOKIE_SECRET=${SESSION_COOKIE_SECRET:?SESSION_COOKIE_SECRET is required}
       - ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH:?ADMIN_PASSWORD_HASH is required}
-      - ADMIN_SESSION_TTL_DAYS=${ADMIN_SESSION_TTL_DAYS:-7}
+      - CORS_ALLOWED_ORIGINS=concurso.pabloquiros.click
       - PHOTOS_DIR=/var/lib/concurso/fotos
     depends_on:
       - mongo
