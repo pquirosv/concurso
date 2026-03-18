@@ -15,7 +15,6 @@ const hasYearPhoto = ref(false);
 const cities = ref([]);
 const hasInitialized = ref(false);
 const questionError = ref('');
-const questionMode = ref(() => '/api/year');
 const isPhotoLoaded = ref(false);
 const isQuestionReady = computed(() => Boolean(questions.value.name) && questions.value.options.length > 0);
 const showEmptyState = computed(() => hasInitialized.value && !hasPhotos.value);
@@ -46,24 +45,12 @@ const initDatasetInfo = async () => {
       hasYearPhoto.value = yearResponse.data?.hasYearPhoto || false;
       const citiesResponse = await axios.get('/api/cities');
       cities.value = citiesResponse.data || [];
-      setQuestionMode();
     }
     hasInitialized.value = true;
   } catch (error) {
     console.error(error);
     hasPhotos.value = false;
     hasInitialized.value = true;
-  }
-};
-
-// Determine the question mode based on dataset characteristics.
-const setQuestionMode = () => {
-  if (hasYearPhoto.value && cities.value.length > 0) {
-    questionMode.value = () => (randomInt(2) === 0 ? '/api/year' : '/api/city');
-  } else if (!hasYearPhoto.value) {
-    questionMode.value = () => '/api/city';
-  } else {
-    questionMode.value = () => '/api/year';
   }
 };
 
@@ -97,7 +84,11 @@ const fetchQuestion = async () => {
   questionError.value = '';
   isPhotoLoaded.value = false;
   try {
-    const apiUrl = questionMode.value();
+    const apiUrl = hasYearPhoto.value && cities.value.length > 0
+      ? (randomInt(2) === 0 ? '/api/year' : '/api/city')
+      : !hasYearPhoto.value
+        ? '/api/city'
+        : '/api/year';
     const response = await axios.get(apiUrl);
     const responseData = response.data;
 
