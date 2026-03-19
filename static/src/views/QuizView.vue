@@ -16,6 +16,7 @@ const cities = ref([]);
 const hasInitialized = ref(false);
 const questionError = ref('');
 const questionMode = ref(() => '/api/year');
+const isPhotoLoaded = ref(false);
 const isQuestionReady = computed(() => Boolean(questions.value.name) && questions.value.options.length > 0);
 const showEmptyState = computed(() => hasInitialized.value && !hasPhotos.value);
 const showQuestionError = computed(() => hasInitialized.value && hasPhotos.value && Boolean(questionError.value));
@@ -94,6 +95,7 @@ const setCityQuestion = (responseData) => {
 // Fetch a new question and populate the UI state.
 const fetchQuestion = async () => {
   questionError.value = '';
+  isPhotoLoaded.value = false;
   try {
     const apiUrl = questionMode.value();
     const response = await axios.get(apiUrl);
@@ -109,6 +111,11 @@ const fetchQuestion = async () => {
     console.error(error);
     questionError.value = 'No se pudo cargar una pregunta. Vuelve a intentarlo.';
   }
+};
+
+// Mark the current photo as ready once the browser finishes loading it.
+const handlePhotoLoad = () => {
+  isPhotoLoaded.value = true;
 };
 
 // Initialize data once the component is mounted.
@@ -171,13 +178,15 @@ const newQuestion = async () => {
           </button>
         </div>
       </div>
-      <div class="foto">
+      <div class="foto" :style="{ visibility: isPhotoLoaded ? 'visible' : 'hidden' }">
         <img
+          :key="questions.name"
           :src="'/fotos/' + questions.name"
           :alt="`Foto de pregunta ${questions.mode === 'year' ? 'año' : 'ciudad'}`"
           loading="eager"
           fetchpriority="high"
           decoding="async"
+          @load="handlePhotoLoad"
         />
       </div>
     </div>
