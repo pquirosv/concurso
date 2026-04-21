@@ -72,7 +72,7 @@ Photo files must be served through `/api/photos/file/:name` so the API can enfor
 ## Documentation Map
 
 - Full local Docker and production runtime guide: [`DOCKER.md`](DOCKER.md)
-- Frontend-only Vite details: [`static/README.md`](./static/README.md]
+- Frontend-only Vite details: [`static/README.md`](./static/README.md)
 
 ## Project Structure
 
