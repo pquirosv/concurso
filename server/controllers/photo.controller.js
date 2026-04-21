@@ -93,6 +93,7 @@ photoCtrl.getPhotoFile = async (req, res) => {
                 return;
             }
             if (err.code === 'ENOENT') {
+                console.warn(`[photos] allowed photo file is missing from PHOTOS_DIR: ${filePath}`);
                 return res.status(404).json({ error: 'Photo not found' });
             }
             respondServiceError(res, err, 'getPhotoFile');
