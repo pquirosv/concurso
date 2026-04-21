@@ -35,8 +35,8 @@ services:
       - PHOTOS_DIR=/photos_out
     volumes:
       - ./tools/photo_ingest:/app
-      - ${SOURCE_DIR:-/var/lib/concurso/fotos}:/photos:ro
-      - ${PHOTOS_DIR:-/var/lib/concurso/fotos_out}:/photos_out:rw
+      - ${SOURCE_DIR:-/var/lib/concurso/source}:/photos:ro
+      - ${PHOTOS_DIR:-/var/lib/concurso/fotos}:/photos_out:rw
     depends_on:
       - mongo
 
