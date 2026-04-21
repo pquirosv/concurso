@@ -32,10 +32,12 @@ describe('Photos API', () => {
     const Photo = getPhotoModel();
 
     await Photo.create([
-      { name: 'Photo One', year: 1990, city: 'San Jose' },
-      { name: 'Photo Two', year: 2001, city: 'Cartago' },
-      { name: 'Photo Three', city: 'Alajuela' },
+      { name: 'Photo One', year: 1990, city: 'San Jose', isPublic: true },
+      { name: 'Photo Two', year: 2001, city: 'Cartago', isPublic: false },
+      { name: 'Photo Three', city: 'Alajuela', isPublic: true },
     ]);
+    fs.writeFileSync(path.join(photosDir, 'Photo One'), 'public-photo');
+    fs.writeFileSync(path.join(photosDir, 'Photo Two'), 'private-photo');
   });
 
   afterAll(async () => {
@@ -58,23 +60,45 @@ describe('Photos API', () => {
     expect(response.body).toEqual({ status: 'Photos goes here' });
   });
 
-  test('GET /api/photos/count returns total photos', async () => {
+  test('GET /api/photos/count returns public photo count without admin session', async () => {
     const response = await request(app).get('/api/photos/count');
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ count: 3 });
+    expect(response.body).toEqual({ count: 2 });
   });
 
-  test('GET /api/year returns a random photo with year', async () => {
+  test('GET /api/year returns only a public random photo without admin session', async () => {
     const response = await request(app).get('/api/year');
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual(
       expect.objectContaining({
-        name: expect.any(String),
-        year: expect.any(Number),
+        name: 'Photo One',
+        year: 1990,
       })
     );
+  });
+
+  test('GET /api/city returns only public city photos without admin session', async () => {
+    const response = await request(app).get('/api/city');
+
+    expect(response.status).toBe(200);
+    expect(['Photo One', 'Photo Three']).toContain(response.body.name);
+    expect(response.body.name).not.toBe('Photo Two');
+  });
+
+  test('GET /api/photos/file/:name serves public photos without admin session', async () => {
+    const response = await request(app).get('/api/photos/file/Photo%20One');
+
+    expect(response.status).toBe(200);
+    expect(response.body.toString()).toBe('public-photo');
+  });
+
+  test('GET /api/photos/file/:name hides private photos without admin session', async () => {
+    const response = await request(app).get('/api/photos/file/Photo%20Two');
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({ error: 'Photo not found' });
   });
 
   test('GET /api/admin/session allows single configured CORS origin from env', async () => {
@@ -152,8 +176,23 @@ describe('Photos API', () => {
         expect.objectContaining({
           _id: expect.any(String),
           name: expect.any(String),
+          isPublic: expect.any(Boolean),
         })
       );
+    });
+
+    test('GET /api/photos/count returns total photo count with admin session', async () => {
+      const response = await request(app).get('/api/photos/count').set('Cookie', adminSessionCookie);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ count: 3 });
+    });
+
+    test('GET /api/photos/file/:name serves private photos with admin session', async () => {
+      const response = await request(app).get('/api/photos/file/Photo%20Two').set('Cookie', adminSessionCookie);
+
+      expect(response.status).toBe(200);
+      expect(response.body.toString()).toBe('private-photo');
     });
 
     test('GET /api/admin/photos/:id returns single photo', async () => {
@@ -170,6 +209,7 @@ describe('Photos API', () => {
           name: 'Photo One',
           year: 1990,
           city: 'San Jose',
+          isPublic: true,
         })
       );
     });
@@ -189,6 +229,7 @@ describe('Photos API', () => {
           name: expect.stringMatching(/\.jpg$/),
           year: 2010,
           city: 'Heredia',
+          isPublic: false,
         })
       );
 
@@ -213,6 +254,25 @@ describe('Photos API', () => {
           name: 'Photo Two',
           city: 'Limon',
           year: 2005,
+        })
+      );
+    });
+
+    test('PATCH /api/admin/photos/:id updates public visibility', async () => {
+      const { getPhotoModel } = require('./models/photo');
+      const Photo = getPhotoModel();
+      const existing = await Photo.findOne({ name: 'Photo Two' }).lean();
+
+      const response = await request(app).patch(`/api/admin/photos/${existing._id}`).set('Cookie', adminSessionCookie).send({
+        isPublic: true,
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(
+        expect.objectContaining({
+          _id: existing._id.toString(),
+          name: 'Photo Two',
+          isPublic: true,
         })
       );
     });

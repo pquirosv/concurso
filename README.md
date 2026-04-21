@@ -67,6 +67,8 @@ node -e "const bcrypt=require('bcryptjs'); console.log(bcrypt.hashSync('your-adm
 `CORS_ALLOWED_ORIGINS` is the runtime allowlist (single value, comma-separated values, or list-style syntax like `['https://a.com','https://b.com']`).  
 When `CORS_ALLOWED_ORIGINS` is empty or missing, the API falls back to hardcoded local origins (`http://localhost:8080` and `http://localhost:5173`).
 
+Photo files must be served through `/api/photos/file/:name` so the API can enforce public/admin visibility. Do not expose `PHOTOS_DIR` directly from host Nginx with a `/fotos/` alias in production.
+
 ## Documentation Map
 
 - Full local Docker and production runtime guide: [`DOCKER.md`](DOCKER.md)

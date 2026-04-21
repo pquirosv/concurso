@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, nextTick } from 'vue';
 import axios from 'axios';
 
 const questions = ref({
@@ -9,6 +9,7 @@ const questions = ref({
   options: [],
 });
 const selected = ref(null);
+const photoElement = ref(null);
 
 const hasPhotos = ref(false);
 const hasYearPhoto = ref(false);
@@ -20,6 +21,7 @@ const isQuestionReady = computed(() => Boolean(questions.value.name) && question
 const showEmptyState = computed(() => hasInitialized.value && !hasPhotos.value);
 const showQuestionError = computed(() => hasInitialized.value && hasPhotos.value && Boolean(questionError.value));
 const showMain = computed(() => hasInitialized.value && hasPhotos.value && isQuestionReady.value);
+const photoUrl = computed(() => `/api/photos/file/${encodeURIComponent(questions.value.name)}`);
 
 // Generate a random integer in [0, maxExclusive) using Math.random.
 const randomInt = (maxExclusive) => Math.floor(Math.random() * maxExclusive);
@@ -98,9 +100,19 @@ const fetchQuestion = async () => {
     else if (apiUrl === '/api/city') {
       setCityQuestion(responseData);
     }
+    await nextTick();
+    syncPhotoLoadedState();
   } catch (error) {
     console.error(error);
     questionError.value = 'No se pudo cargar una pregunta. Vuelve a intentarlo.';
+  }
+};
+
+// Mark cached or unchanged images as loaded when the browser already has them ready.
+const syncPhotoLoadedState = () => {
+  const image = photoElement.value;
+  if (image?.complete && image.naturalWidth > 0) {
+    isPhotoLoaded.value = true;
   }
 };
 
@@ -171,8 +183,9 @@ const newQuestion = async () => {
       </div>
       <div class="foto" :style="{ visibility: isPhotoLoaded ? 'visible' : 'hidden' }">
         <img
+          ref="photoElement"
           :key="questions.name"
-          :src="'/fotos/' + questions.name"
+          :src="photoUrl"
           :alt="`Foto de pregunta ${questions.mode === 'year' ? 'año' : 'ciudad'}`"
           loading="eager"
           fetchpriority="high"

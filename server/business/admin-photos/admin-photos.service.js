@@ -35,19 +35,19 @@ class AdminPhotosService {
   // Return the full admin list of photos for client-side table pagination.
   async listPhotos() {
     const Photo = this.photoModelFactory();
-    const items = await Photo.find({}, { _id: 1, name: 1, year: 1, city: 1 }).sort({ _id: -1 }).lean();
-    return items.map((item) => ({ _id: item._id, name: item.name, year: item.year, city: item.city }));
+    const items = await Photo.find({}, { _id: 1, name: 1, year: 1, city: 1, isPublic: 1 }).sort({ _id: -1 }).lean();
+    return items.map((item) => this.normalizePhoto(item));
   }
 
   // Return one photo record by id for admin edit workflows.
   async getPhotoById(id) {
     const photoId = this.validatePhotoId(id);
     const Photo = this.photoModelFactory();
-    const photo = await Photo.findById(photoId, { _id: 1, name: 1, year: 1, city: 1 }).lean();
+    const photo = await Photo.findById(photoId, { _id: 1, name: 1, year: 1, city: 1, isPublic: 1 }).lean();
     if (!photo) {
       throw new AdminPhotosServiceError('Photo not found', 404);
     }
-    return { _id: photo._id, name: photo.name, year: photo.year, city: photo.city };
+    return this.normalizePhoto(photo);
   }
 
   // Create a new photo metadata record and persist the uploaded file with rollback on DB failures.
@@ -76,6 +76,7 @@ class AdminPhotosService {
         name: created.name,
         year: created.year,
         city: created.city,
+        isPublic: Boolean(created.isPublic),
       };
     } catch (error) {
       await this.cleanupFileAfterDbFailure(filePath);
@@ -95,14 +96,25 @@ class AdminPhotosService {
     const updated = await Photo.findByIdAndUpdate(photoId, payload, {
       new: true,
       runValidators: true,
-      projection: { _id: 1, name: 1, year: 1, city: 1 },
+      projection: { _id: 1, name: 1, year: 1, city: 1, isPublic: 1 },
     }).lean();
 
     if (!updated) {
       throw new AdminPhotosServiceError('Photo not found', 404);
     }
 
-    return { _id: updated._id, name: updated.name, year: updated.year, city: updated.city };
+    return this.normalizePhoto(updated);
+  }
+
+  // Normalize a photo document into the admin API response shape.
+  normalizePhoto(photo) {
+    return {
+      _id: photo._id,
+      name: photo.name,
+      year: photo.year,
+      city: photo.city,
+      isPublic: Boolean(photo.isPublic),
+    };
   }
 
   // Delete a photo metadata record and remove its file from disk when present.

@@ -4,7 +4,7 @@ const { AdminPhotosService } = require('./admin-photos.service');
 describe('Admin photos business layer', () => {
   test('AdminPhotosService listPhotos returns full photo list for client-side pagination', async () => {
     const lean = jest.fn().mockResolvedValue([
-      { _id: '2', name: 'Photo Two', year: 2001, city: 'Cartago' },
+      { _id: '2', name: 'Photo Two', year: 2001, city: 'Cartago', isPublic: true },
       { _id: '1', name: 'Photo One', year: 1990, city: 'San Jose' },
     ]);
     const sort = jest.fn().mockReturnValue({ lean });
@@ -15,11 +15,11 @@ describe('Admin photos business layer', () => {
 
     const result = await service.listPhotos();
 
-    expect(find).toHaveBeenCalledWith({}, { _id: 1, name: 1, year: 1, city: 1 });
+    expect(find).toHaveBeenCalledWith({}, { _id: 1, name: 1, year: 1, city: 1, isPublic: 1 });
     expect(sort).toHaveBeenCalledWith({ _id: -1 });
     expect(result).toEqual([
-      { _id: '2', name: 'Photo Two', year: 2001, city: 'Cartago' },
-      { _id: '1', name: 'Photo One', year: 1990, city: 'San Jose' },
+      { _id: '2', name: 'Photo Two', year: 2001, city: 'Cartago', isPublic: true },
+      { _id: '1', name: 'Photo One', year: 1990, city: 'San Jose', isPublic: false },
     ]);
   });
 
@@ -34,7 +34,10 @@ describe('Admin photos business layer', () => {
   test('PhotoValidator validates update payload and object ids', () => {
     const validator = new PhotoValidator();
     expect(validator.validatePayload({}, 'update')).toEqual({
-      error: 'At least one field (year, city) is required',
+      error: 'At least one field (year, city, isPublic) is required',
+    });
+    expect(validator.validatePayload({ isPublic: true }, 'update')).toEqual({
+      payload: { isPublic: true },
     });
     expect(validator.validatePayload({ name: 'Renamed Photo' }, 'update')).toEqual({
       error: 'Name is immutable and cannot be updated',

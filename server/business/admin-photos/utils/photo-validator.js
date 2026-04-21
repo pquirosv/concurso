@@ -7,6 +7,7 @@ class PhotoValidator {
     const payload = {};
     const hasYear = Object.prototype.hasOwnProperty.call(body || {}, 'year');
     const hasCity = Object.prototype.hasOwnProperty.call(body || {}, 'city');
+    const hasIsPublic = Object.prototype.hasOwnProperty.call(body || {}, 'isPublic');
     
     const hasName = Object.prototype.hasOwnProperty.call(body || {}, 'name');
 
@@ -46,8 +47,15 @@ class PhotoValidator {
       }
     }
 
+    if (hasIsPublic) {
+      if (typeof body.isPublic !== 'boolean') {
+        return { error: 'isPublic must be a boolean' };
+      }
+      payload.isPublic = body.isPublic;
+    }
+
     if (mode === 'update' && Object.keys(payload).length === 0) {
-      return { error: 'At least one field (year, city) is required' };
+      return { error: 'At least one field (year, city, isPublic) is required' };
     }
 
     return { payload };
