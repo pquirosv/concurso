@@ -1,2 +1,2 @@
-pymongo>=4.6,<5
+pymongo>=4.17.0,<5
 Pillow>=10.0,<13
