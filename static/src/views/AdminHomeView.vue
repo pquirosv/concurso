@@ -12,12 +12,14 @@ type AdminPhoto = {
   fileName?: string;
   year?: number;
   city?: string;
+  isPublic?: boolean;
 };
 
 const tableHeaders: Header[] = [
   { text: 'Nombre', value: 'name', sortable: true },
   { text: 'Año', value: 'year', sortable: true },
   { text: 'Ciudad', value: 'city', sortable: true },
+  { text: 'Pública', value: 'isPublic', sortable: true },
   { text: 'Editar', value: 'edit' },
   { text: 'Borrar', value: 'delete' },
 ];
@@ -32,13 +34,14 @@ const photos = ref<AdminPhoto[]>([]);
 const savingId = ref('');
 const deletingId = ref('');
 const editingId = ref('');
+const publishingId = ref('');
 const editForm = ref({ year: '', city: '' });
 
 // Return the displayable file key used for links and table identity.
 const getPhotoFileKey = (photo: AdminPhoto) => photo.fileName || photo.name || '';
 
 // Return an encoded public photo URL for the selected record.
-const getPhotoLink = (photo: AdminPhoto) => `/fotos/${encodeURIComponent(getPhotoFileKey(photo))}`;
+const getPhotoLink = (photo: AdminPhoto) => `/api/photos/file/${encodeURIComponent(getPhotoFileKey(photo))}`;
 
 // Ensure the current browser session is still authenticated as admin.
 const ensureAuthenticated = async () => {
@@ -105,6 +108,27 @@ const submitEdit = async (photoId: string) => {
   } finally {
     savingId.value = '';
   }
+};
+
+// Update whether a photo is visible to public quiz users.
+const updatePublicVisibility = async (photo: AdminPhoto, isPublic: boolean) => {
+  publishingId.value = photo._id;
+  errorMessage.value = '';
+
+  try {
+    const response = await axios.patch(`/api/admin/photos/${photo._id}`, { isPublic }, { withCredentials: true });
+    photos.value = photos.value.map((item) => (item._id === photo._id ? { ...item, ...response.data } : item));
+  } catch (error) {
+    console.error(error);
+    errorMessage.value = 'Fallo al cambiar la visibilidad pública.';
+  } finally {
+    publishingId.value = '';
+  }
+};
+
+// Read checkbox state from the visibility toggle change event.
+const handlePublicVisibilityChange = (photo: AdminPhoto, event: Event) => {
+  updatePublicVisibility(photo, (event.target as HTMLInputElement).checked);
 };
 
 // Confirm and delete one photo record from the admin list.
@@ -189,6 +213,16 @@ onMounted(async () => {
               <input v-model="editForm.city" type="text" class="admin-input" />
             </template>
             <template v-else>{{ photo.city }}</template>
+          </template>
+          <template #item-isPublic="photo">
+            <input
+              type="checkbox"
+              class="admin-checkbox-input"
+              :checked="Boolean(photo.isPublic)"
+              :disabled="publishingId === photo._id"
+              :aria-label="`Hacer pública ${getPhotoFileKey(photo)}`"
+              @change="handlePublicVisibilityChange(photo, $event)"
+            />
           </template>
           <template #item-edit="photo">
             <div class="actions">

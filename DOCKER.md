@@ -81,7 +81,7 @@ Mapped from host:
 - Source photos are read from host `SOURCE_DIR`.
 - Ingest copies/normalizes files into host `PHOTOS_DIR`.
 - API writes admin uploads to host `PHOTOS_DIR`.
-- Nginx serves photos from `PHOTOS_DIR` at `/fotos/`.
+- API serves allowed photos from `PHOTOS_DIR` at `/api/photos/file/:name` after checking public/admin visibility.
 - Mongo data is persisted in the `mongo-data` Docker volume.
 
 ## Production (Current Setup)
@@ -109,6 +109,7 @@ There is no Nginx service in `docker-compose.prod.yml`.
 
 - `api` is bound to `127.0.0.1:3000:3000`
 - Host Nginx is expected to proxy to `http://127.0.0.1:3000`
+- Host Nginx must not expose a direct `/fotos/` alias, otherwise private photos can bypass the API visibility check.
 
 ### Reindex photos in production
 

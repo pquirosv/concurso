@@ -5,13 +5,29 @@ const PhotoSchema = new Schema({
     // Keep name as the immutable stored filename; admin updates must target records by _id and cannot rename files.
     name: {type: String, required: true, immutable: true},
     year: {type: Number, required: false},
-    city: {type: String, required: false}
+    city: {type: String, required: false},
+    isPublic: {type: Boolean, default: false}
 });
 
 // Query patterns:
 // - random year question: $match on year existence
 // - random city question and cities list: $match/distinct on city existence
+// - public quiz scope: $match on isPublic before field filters
 // - optional mixed filters in future: city + year
+PhotoSchema.index(
+  { isPublic: 1, year: 1 },
+  {
+    name: 'idx_photos_public_year_exists',
+    partialFilterExpression: { isPublic: true, year: { $exists: true } },
+  }
+);
+PhotoSchema.index(
+  { isPublic: 1, city: 1 },
+  {
+    name: 'idx_photos_public_city_exists',
+    partialFilterExpression: { isPublic: true, city: { $exists: true } },
+  }
+);
 PhotoSchema.index(
   { year: 1 },
   {

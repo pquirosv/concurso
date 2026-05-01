@@ -324,6 +324,17 @@ p {
   padding-bottom: 0.9rem;
 }
 
+.admin-checkbox-input {
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--color-success);
+  cursor: pointer;
+}
+
+.admin-checkbox-input:disabled {
+  cursor: not-allowed;
+}
+
 .actions {
   display: flex;
   gap: 0.5rem;
